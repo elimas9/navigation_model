@@ -4,7 +4,7 @@ import numpy.testing as npt
 
 from navigation_model.analysis.metrics import Metric, Analyzer, metric, \
     discretize_positions, occupancy_map, tile_analysis, hist_orientations, motion_analysis, hist_time_moving, \
-    subareas, mov_bouts
+    subareas, mov_bouts, compute_orientations
 
 from navigation_model.simulation.maze import Maze
 
@@ -187,3 +187,9 @@ class TestMetricFunctions(unittest.TestCase):
         mov, stop = mov_bouts(hist)
         self.assertEqual(mov, 2)
         self.assertEqual(stop, 0)
+
+    def test_compute_orientations(self):
+        pos_list = [(0, 0), (0, 0), (0, 1), (1, 1)]
+        ori = compute_orientations(pos_list)
+        self.assertEqual(len(pos_list), len(ori))
+        npt.assert_allclose(ori, [np.pi / 2] * 3 + [0.0])

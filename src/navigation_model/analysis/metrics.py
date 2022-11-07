@@ -357,3 +357,33 @@ def mov_bouts(histogram_time_moving):
         elif b[0] > median_period and b[1] == 0:
             stop += b[0]
     return mov, stop
+
+
+@metric("absolute_orientations")
+def compute_orientations(continuous_positions):
+    """
+    Compute the absolute orientations from a list of positions
+
+    :param continuous_positions: list of continuous positions
+    :return: list of absolute orientations
+    """
+    orientations = []
+
+    for i in range(len(continuous_positions) - 1):
+        p2 = continuous_positions[i + 1]
+        p1 = continuous_positions[i]
+
+        if not np.allclose(p1, p2):
+            # get angle in radians
+            theta = np.arctan2(p2[1] - p1[1], p2[0] - p1[0])
+            # correct angle
+            if theta > np.pi:
+                theta = np.pi * 2 - theta
+            elif theta < -np.pi:
+                theta = -np.pi * 2 - theta
+
+            orientations.append(theta)
+        else:
+            if i > 0 and len(orientations) != 0:
+                orientations.append(orientations[-1])
+    return [orientations[0]] * (len(continuous_positions) - len(orientations)) + orientations
