@@ -35,8 +35,12 @@ class Session:
             while idx < n_samples - 1:
                 # advance until at least sampling_t seconds have passed
                 curr_time = timestamps[idx]
+                if np.isnan(curr_time):
+                    idx += 1
+                    continue
                 next_idx = idx + 1
-                while next_idx < n_samples and timestamps[next_idx] <= curr_time + self._sampling_t:
+                while next_idx < n_samples and \
+                        (np.isnan(timestamps[next_idx]) or timestamps[next_idx] <= curr_time + self._sampling_t):
                     next_idx += 1
 
                 # set trajectory if valid
@@ -170,6 +174,9 @@ class Session:
     def _compute_orientations(self):
         self._orientations = compute_orientations(self._trajectory)
 
+    def __len__(self):
+        return len(self._trajectory)
+
 
 class SessionList:
     """
@@ -256,3 +263,16 @@ class SessionList:
         for sd in sessions_list:
             sl._sessions.append(Session.from_dict(sd))
         return sl
+
+
+def adjust_positions_to_maze(continuous_positions, maze):
+    """
+    Adjust positions to fit in a maze
+
+    Positions outsite the maze are changed with the center of the closest tile
+
+    :param continuous_positions: list of continuous positions
+    :param maze: maze
+    :return: adjusted list of positions
+    """
+    return maze.disc2cont_list([maze.get_closest_visitable_cont(p) for p in continuous_positions])
