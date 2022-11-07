@@ -61,6 +61,16 @@ class TestSession(unittest.TestCase):
         npt.assert_allclose(s1.orientations, s2.orientations)
         npt.assert_allclose(s1.reward, s2.reward)
 
+    def test_nan(self):
+        times = np.linspace(0., 1., 10)
+        traj = np.random.random((10, 2))
+        traj[0] = (np.nan, np.nan)
+
+        session = Session(times, traj, new_sampling_time=0.2)
+        expected = traj[::2]
+        expected[0] = traj[1]
+        npt.assert_allclose(session.trajectory, expected)
+
 
 class TestSessionList(unittest.TestCase):
 

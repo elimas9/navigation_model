@@ -33,14 +33,19 @@ class Session:
             idx = 0
             n_samples = len(timestamps)
             while idx < n_samples - 1:
-                # set trajectory
-                self._trajectory.append(trajectory[idx])
-
                 # advance until at least sampling_t seconds have passed
                 curr_time = timestamps[idx]
                 next_idx = idx + 1
                 while next_idx < n_samples and timestamps[next_idx] <= curr_time + self._sampling_t:
                     next_idx += 1
+
+                # set trajectory if valid
+                traj_window = np.array(trajectory[idx:next_idx])
+                traj_window = traj_window[np.all(np.isfinite(traj_window), axis=1)]
+                if len(traj_window) > 0:
+                    self._trajectory.append(traj_window[0])
+                else:
+                    continue
 
                 # set reward
                 if reward is not None:
