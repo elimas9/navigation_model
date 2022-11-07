@@ -164,3 +164,90 @@ class Session:
 
     def _compute_orientations(self):
         self._orientations = compute_orientations(self._trajectory)
+
+
+class SessionList:
+    """
+    An iterable list of sessions that can give aggregate session information
+    """
+
+    def __init__(self):
+        """
+        Create a new session list
+
+        """
+        self._sessions = []
+
+    def append(self, timestamps, trajectory, new_sampling_time=None, reward=None):
+        """
+        Append a new session to the list
+
+        :param timestamps: list of timestamps
+        :param trajectory: list of coordinates
+        :param new_sampling_time: sampling time for subsampling
+        :param reward: list of rewards
+        """
+        self._sessions.append(Session(timestamps, trajectory, new_sampling_time, reward))
+
+    @property
+    def all_trajectories(self):
+        """
+        Get all trajectory as a single list
+
+        :return: trajectories
+        """
+        all_data = []
+        for s in self._sessions:
+            all_data += s.trajectory
+        return all_data
+
+    @property
+    def all_rewards(self):
+        """
+        Get all rewards as a single list
+
+        :return: rewards
+        """
+        all_data = []
+        for s in self._sessions:
+            all_data += s.reward
+        return all_data
+
+    @property
+    def all_orientations(self):
+        """
+        Get all orientations as a single list
+
+        :return: orientations
+        """
+        all_data = []
+        for s in self._sessions:
+            all_data += s.orientations
+        return all_data
+
+    def __getitem__(self, i):
+        return self._sessions[i]
+
+    def __iter__(self):
+        return iter(self._sessions)
+
+    def to_list(self):
+        """
+        Transform the session list in a list
+
+        :return: list
+        """
+        return [s.to_dict() for s in self._sessions]
+
+    @classmethod
+    def from_list(cls, sessions_list):
+        """
+        Create a new session list from a list
+
+        :param sessions_list: list of dictionaries with trajectory, sampling_time and (optional) reward keys
+        :return: new SessionList object
+        """
+        sl = cls()
+        for sd in sessions_list:
+            sl._sessions.append(Session.from_dict(sd))
+        return sl
