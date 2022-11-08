@@ -49,6 +49,7 @@ class Session:
                 if len(traj_window) > 0:
                     self._trajectory.append(traj_window[0])
                 else:
+                    idx = next_idx
                     continue
 
                 # set reward
