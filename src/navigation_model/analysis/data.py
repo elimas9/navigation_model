@@ -276,4 +276,4 @@ def adjust_positions_to_maze(continuous_positions, maze):
     :param maze: maze
     :return: adjusted list of positions
     """
-    return maze.disc2cont_list([maze.get_closest_visitable_cont(p) for p in continuous_positions])
+    return [maze.disc2cont(maze.get_closest_visitable_cont(p)) if not np.any(np.isnan(p)) else p for p in continuous_positions]
