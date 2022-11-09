@@ -91,7 +91,7 @@ def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, subplots_
     :param maze: optional maze
     :param cmap: colormap
     :param subplots_ratio: ratio of subplots over colorbar
-    :return: list of axes
+    :return: np.arry of axes (shape=rows x columns)
     """
     if rows * columns < len(maps):
         raise RuntimeError("Not enough rows and columns specified!")
@@ -109,19 +109,21 @@ def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, subplots_
         for r in range(rows):
             row_axs = []
             for c in range(columns):
-                ax = fig.add_subplot(v_grid[r, c])
                 idx = r * columns + c
-                if idx > len(maps):
-                    break
-                v = maps[idx]
-                plot_map(ax, v, maze=maze, cmap=cmap, norm=norm)
-                row_axs.append(ax)
+                if idx >= len(maps):
+                    row_axs.append(None)
+                else:
+                    ax = fig.add_subplot(v_grid[r, c])
+                    v = maps[idx]
+                    plot_map(ax, v, maze=maze, cmap=cmap, norm=norm)
+                    row_axs.append(ax)
             axs.append(row_axs)
     else:
         for i, v in enumerate(maps):
             ax = fig.add_subplot(v_grid[i])
             plot_map(ax, v, maze=maze, cmap=cmap, norm=norm)
+            axs.append(ax)
 
     fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax)
 
-    return axs
+    return np.array(axs)
