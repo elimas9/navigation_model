@@ -241,7 +241,7 @@ def tile_analysis(discrete_positions, maze, tiles=None):
 
     # ratio
     totals = maze.description()
-    ratio = {t: count[t] / totals[t] for t in tiles}
+    ratio = {t: count[t] / totals[t] if totals[t] > 0 else 0 for t in tiles}
 
     return perc, ratio, count
 
