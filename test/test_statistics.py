@@ -32,6 +32,7 @@ class TestResultsDistance(unittest.TestCase):
         d = dist({"k1": 1, "k2": 0})
         npt.assert_allclose(d, 2)
 
+        dist({"k1": 3, "k2": 0})
         npt.assert_allclose(dist.mean(), 3)
         npt.assert_allclose(dist.median(), 3)
         npt.assert_allclose(dist.std(), 1)
