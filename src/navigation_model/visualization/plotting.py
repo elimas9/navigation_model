@@ -166,20 +166,28 @@ def plot_boxes(ax, data, labels=None, title=None, show_points=True, box_args=Non
         data = np.array([d for d in data.values()]).transpose()
     else:
         data = np.array([d for d in data]).transpose()
+    data_length = data.shape[-1]
 
-    # actual plot
-    if box_args is None:
-        box_args = {}
-    sns.boxplot(data=data, ax=ax, **box_args)
+    # we need to do a different thing when plotting single points
+    if len(data.shape) == 1:
+        # and we plot just the means
+        data = [np.array([d]) for d in data]
+        sns.boxplot(data=data, ax=ax)
+        data_length = len(data)
+    else:
+        # actual plot
+        if box_args is None:
+            box_args = {}
+        sns.boxplot(data=data, ax=ax, **box_args)
 
-    if show_points:
-        if strip_args is None:
-            strip_args = {}
-        sns.stripplot(data=data, ax=ax, **strip_args)
+        if show_points:
+            if strip_args is None:
+                strip_args = {}
+            sns.stripplot(data=data, ax=ax, **strip_args)
 
     # labels
     if labels is not None:
-        if data.shape[1] > len(labels):
+        if data_length > len(labels):
             raise RuntimeError("Not enough labels for box plots")
 
         ax.set_xticklabels(labels)
