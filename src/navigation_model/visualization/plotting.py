@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 import matplotlib
+import seaborn as sns
 
 
 def plot_trajectory(ax, trajectory, c="b"):
@@ -47,7 +48,7 @@ def plot_reward_events(ax, reward_events, marker="x", c="r"):
     return ax.scatter(reward_events[:, 0], reward_events[:, 1], c=c, marker=marker, zorder=3)
 
 
-def plot_map(ax, map_data, maze=None, cmap=None, norm=None):
+def plot_map(ax, map_data, maze=None, cmap=None, norm=None, title=None):
     """
     Plot a map (V table, occupancy map, etc)
 
@@ -58,6 +59,7 @@ def plot_map(ax, map_data, maze=None, cmap=None, norm=None):
     :param maze: optional maze
     :param cmap: color map
     :param norm: normalization
+    :param title: axis title
     :return: AxesImage object
     """
     if cmap is None:
@@ -75,10 +77,12 @@ def plot_map(ax, map_data, maze=None, cmap=None, norm=None):
     ax.get_yaxis().set_visible(False)
     for spine in ax.spines.values():
         spine.set_visible(False)
+    if title is not None:
+        ax.set_title(title)
     return ax.imshow(data.transpose(), origin="lower", cmap=cmap, norm=norm)
 
 
-def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, subplots_ratio=20):
+def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, subplots_ratio=20, titles=None):
     """
     Plot multiple maps (V table, occupancy map, etc) with a global colorbar
 
@@ -91,10 +95,16 @@ def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, subplots_
     :param maze: optional maze
     :param cmap: colormap
     :param subplots_ratio: ratio of subplots over colorbar
+    :param titles: set titles to maps
     :return: np.arry of axes (shape=rows x columns)
     """
     if rows * columns < len(maps):
         raise RuntimeError("Not enough rows and columns specified!")
+
+    if titles is None:
+        titles = [None] * len(maps)
+    elif len(titles) < len(maps):
+        titles = titles + [None] * (len(maps) - len(titles))
 
     vmax = np.max(maps)
     vmin = np.min(maps)
@@ -115,15 +125,111 @@ def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, subplots_
                 else:
                     ax = fig.add_subplot(v_grid[r, c])
                     v = maps[idx]
-                    plot_map(ax, v, maze=maze, cmap=cmap, norm=norm)
+                    plot_map(ax, v, maze=maze, cmap=cmap, norm=norm, title=titles[idx])
                     row_axs.append(ax)
             axs.append(row_axs)
     else:
         for i, v in enumerate(maps):
             ax = fig.add_subplot(v_grid[i])
-            plot_map(ax, v, maze=maze, cmap=cmap, norm=norm)
+            plot_map(ax, v, maze=maze, cmap=cmap, norm=norm, title=titles[i])
             axs.append(ax)
 
     fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax)
 
     return np.array(axs)
+
+
+def plot_boxes(ax, data, labels=None, title=None, show_points=True, box_args=None, strip_args=None):
+    """
+    Box and whisker plot with optional jittered points
+
+    The input can be given either as a dictionary (without specifying labels), as in
+
+    data={"category1": category1_data,
+          "category2": category2_data,
+          "category3": category3_data}
+
+    or as a list of vectors with optional labels
+
+    data=[category1_data, category2_data, category3_data], labels=["category1", "category2", "category3"]
+
+    :param ax: axis where to plot
+    :param data: dictionary or list with data
+    :param labels: optional list of labels
+    :param title: axis title
+    :param show_points: if True show jittered points
+    :param box_args: dictionary of parameters passed to sns.boxplot
+    :param strip_args: dictionary of parameters passed to sns.stripplot (if enabled)
+    """
+    if type(data) is dict:
+        labels = data.keys()
+        data = np.array([d for d in data.values()]).transpose()
+    else:
+        data = np.array([d for d in data]).transpose()
+
+    # actual plot
+    if box_args is None:
+        box_args = {}
+    sns.boxplot(data=data, ax=ax, **box_args)
+
+    if show_points:
+        if strip_args is None:
+            strip_args = {}
+        sns.stripplot(data=data, ax=ax, **strip_args)
+
+    # labels
+    if labels is not None:
+        if data.shape[1] > len(labels):
+            raise RuntimeError("Not enough labels for box plots")
+
+        ax.set_xticklabels(labels)
+
+    if title is not None:
+        ax.set_title(title)
+
+
+def plot_multiple_boxes(fig, data, rows, columns, labels=None, titles=None, show_points=True,
+                        box_args=None, strip_args=None):
+    """
+    Multiple box and whisker plot in the same figure
+
+    :param fig: figure where to plot
+    :param data: list of dictionaries of lists (see plot_boxes)
+    :param rows: rows for the arrangement
+    :param columns: columns for the arrangment
+    :param labels: optional list of list of labels
+    :param titles: list of titles for the axes
+    :param show_points: if True show jittered points
+    :param box_args: dictionary of parameters passed to sns.boxplot
+    :param strip_args: dictionary of parameters passed to sns.stripplot (if enabled)
+    :return: np.arry of axes (shape=rows x columns)
+    """
+    if rows * columns < len(data):
+        raise RuntimeError("Not enough rows and columns specified!")
+
+    # adjust titles
+    if titles is None:
+        titles = [None] * len(data)
+    elif len(titles) < len(data):
+        titles = titles + [None] * (len(data) - len(titles))
+
+    # adjust labels so that the check is deferred to plot_boxes
+    if labels is None:
+        labels = [None] * len(data)
+
+    axs = fig.subplots(rows, columns, sharey=True)
+
+    if rows > 1 and columns > 1:
+        for r in range(rows):
+            for c in range(columns):
+                idx = r * columns + c
+                if idx >= len(data):
+                    fig.delaxes(axs[r, c])
+                else:
+                    plot_boxes(axs[r, c], data[idx], labels=labels[idx], title=titles[idx],
+                               show_points=show_points, box_args=box_args, strip_args=strip_args)
+    else:
+        for i, v in enumerate(data):
+            plot_boxes(axs[i], data[i], labels=labels[i], title=titles[i],
+                       show_points=show_points, box_args=box_args, strip_args=strip_args)
+    return axs
