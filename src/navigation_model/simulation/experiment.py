@@ -51,7 +51,7 @@ class StandardExperiment:
             self._mouse.move_to(new_position)
 
     def plot(self, ax, maze_tiles=True, maze_borders=False, maze_grid=False,
-             mouse_color="y", mouse_endpoints=False, mouse_trajectory_color="y"):
+             mouse_color="y", mouse_endpoints=False, mouse_trajectory_color="y", mouse_size=0.1):
         """
         Plot the current status of the experiment, including the maze and the mouse
 
@@ -62,8 +62,8 @@ class StandardExperiment:
         :param mouse_color: color of the mouse
         :param mouse_endpoints: if True plot the current mouse endpoints
         :param mouse_trajectory_color: color of the mouse trajectory
-        :return:
+        :param mouse_size: size of the mouse (same units as the maze tile size)
         """
         self._maze.plot(ax, tiles=maze_tiles, borders=maze_borders, grid=maze_grid)
         self._mouse.plot_history(ax, c=mouse_trajectory_color)
-        self._mouse.plot(ax, c=mouse_color, endpoints=mouse_endpoints)
+        self._mouse.plot(ax, c=mouse_color, endpoints=mouse_endpoints, size=mouse_size)

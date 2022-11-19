@@ -30,6 +30,8 @@ def plot_reward_sequence(ax, reward_values, reward_positions, marker="x", c="r")
     :param c: color
     :return: PathCollection object
     """
+    reward_values = np.array(reward_values)
+    reward_positions = np.array(reward_positions)
     reward_events = reward_positions[reward_values != 0]
     return plot_reward_events(ax, reward_events, marker, c)
 
@@ -44,6 +46,7 @@ def plot_reward_events(ax, reward_events, marker="x", c="r"):
     :param c: color
     :return: PathCollection
     """
+
     reward_events = np.array(reward_events)
     return ax.scatter(reward_events[:, 0], reward_events[:, 1], c=c, marker=marker, zorder=3)
 
