@@ -4,7 +4,7 @@ import numpy as np
 
 from scipy.stats import vonmises
 
-from navigation_model.simulation.maze import StandardTiles
+from navigation_model.simulation.maze import StandardTiles, GridTiles
 
 
 class ParameterDescriptor:
@@ -312,6 +312,38 @@ class Component:
     def get_descriptors(cls):
         return cls._descriptors
 
+@weight("W_anx")
+@parameter("p1", doc="absolute weight of the corner tile")
+@parameter("p2", minv=0., maxv=1., doc="relative weight of the wall tile")
+@parameter("p3", minv=0., maxv=1., doc="relative weight of the central area and decision-point tiles")
+@parameter("p4", doc="weight of the decision-point tiles")
+class AnxietyComponent_Grid(Component):
+    """
+    Component that evaluates the current position in the maze
+
+    This component has a weight for every type of tile in the maze.
+    """
+
+    _name = "anx"
+
+    def __init__(self, **params):
+        super().__init__(**params)
+
+        self._maze_weights = self._create_weights(c=self.p1, w=self.p2 * self.p1, m=self.p3 * self.p2 * self.p1,
+                                                  d=self.p4)
+
+    @staticmethod
+    def _create_weights(c, w, m, d, v=-1.0):
+        return {GridTiles.TileType.WALL: w,
+                GridTiles.TileType.CORNER: c,
+                GridTiles.TileType.CENTRE: m,
+                GridTiles.TileType.DECISION_POINT: d,
+                StandardTiles.TileType.VOID: v}
+
+    def update(self, next_tiles, **kwargs):
+        self._val = np.array([self._maze_weights[ns] for ns in next_tiles])
+        if self.debug:
+            print(f'PositionComponent: {self._val}')
 
 @weight("W_anx")
 @parameter("p1", doc="absolute weight of the corner tile")

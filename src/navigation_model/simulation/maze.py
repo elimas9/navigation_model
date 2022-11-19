@@ -61,6 +61,49 @@ class StandardTiles(TileSystem):
         return matplotlib.colors.ListedColormap(['w', 'r', 'g', 'b'])
 
 
+class GridTiles(TileSystem):
+
+    class TileType(IntEnum):
+        WALL = 1
+        CORNER = 2
+        CENTRE = 3
+        DECISION_POINT = 4
+        VOID = 0
+
+    @staticmethod
+    def char_to_mazetile(ch):
+        if ch == 'W':
+            return GridTiles.TileType.WALL
+        if ch == 'C':
+            return GridTiles.TileType.CORNER
+        if ch == 'M':
+            return GridTiles.TileType.CENTRE
+        if ch == 'D':
+            return GridTiles.TileType.DECISION_POINT
+        return GridTiles.TileType.VOID
+
+    @staticmethod
+    def mazetile_tochar(mt):
+        if mt == GridTiles.TileType.WALL:
+            return 'W'
+        if mt == GridTiles.TileType.CORNER:
+            return 'C'
+        if mt == GridTiles.TileType.CENTRE:
+            return 'M'
+        if mt == GridTiles.TileType.DECISION_POINT:
+            return 'D'
+        if mt == GridTiles.TileType.VOID:
+            return 'V'
+
+    @staticmethod
+    def is_visitable(t):
+        return t != GridTiles.TileType.VOID
+
+    @staticmethod
+    def colormap():
+        return matplotlib.colors.ListedColormap(['w', 'r', 'g', 'm', 'b'])
+
+
 class Maze:
 
     def __init__(self, layout, subareas, size_tile, tile_system=StandardTiles):
