@@ -129,7 +129,7 @@ class TestSessionList(unittest.TestCase):
         self.assertEqual(type(sl), SessionList)
         self.assertEqual(len(sl), 2)
 
-    def test_add(self):
+    def test_add_mul(self):
         sl1 = SessionList()
         for _ in range(10):
             sl1.create(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))), reward=list(range(0, 10)))
@@ -139,3 +139,9 @@ class TestSessionList(unittest.TestCase):
 
         sl3 = sl1 + sl2
         self.assertEqual(len(sl3), 15)
+
+        sl4 = sl1 * 3
+        self.assertEqual(len(sl4), 30)
+
+        sl5 = 4 * sl2
+        self.assertEqual(len(sl5), 20)

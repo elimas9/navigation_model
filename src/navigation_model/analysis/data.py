@@ -301,6 +301,24 @@ class SessionList:
             raise RuntimeError("Can only add another SessionList to this SessionList")
         return SessionList(self._sessions + other._sessions)
 
+    def __mul__(self, times):
+        """
+        :type times: int
+        :rtype SessionList:
+        """
+        if type(times) is not int:
+            raise RuntimeError("Can only multiply SessionList to an int")
+        return SessionList(self._sessions * times)
+
+    def __rmul__(self, times):
+        """
+        :type times: int
+        :rtype SessionList:
+        """
+        if type(times) is not int:
+            raise RuntimeError("Can only multiply SessionList to an int")
+        return SessionList(self._sessions * times)
+
 
 def adjust_positions_to_maze(continuous_positions, maze):
     """
