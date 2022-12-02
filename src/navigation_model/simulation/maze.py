@@ -58,7 +58,7 @@ class StandardTiles(TileSystem):
 
     @staticmethod
     def colormap():
-        return matplotlib.colors.ListedColormap(['w', 'r', 'g', 'b'])
+        return matplotlib.colors.ListedColormap(['w', 'mediumseagreen', 'darkgreen', 'yellowgreen'])
 
 
 class GridTiles(TileSystem):
