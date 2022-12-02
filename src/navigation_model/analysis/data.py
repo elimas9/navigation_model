@@ -184,16 +184,23 @@ class SessionList:
     An iterable list of sessions that can give aggregate session information
     """
 
-    def __init__(self):
+    def __init__(self, *args):
         """
         Create a new session list
 
+        :param args: sequence of sessions (or list of sessions)
         """
-        self._sessions = []
+        if len(args) == 1 and type(args[0]) is list:
+            self._sessions = args[0]
+        else:
+            self._sessions = [*args]
+        # check that we are only storing sessions
+        for s in self._sessions:
+            self._assert_session(s)
 
-    def append(self, timestamps, trajectory, new_sampling_time=None, reward=None):
+    def create(self, timestamps, trajectory, new_sampling_time=None, reward=None):
         """
-        Append a new session to the list
+        Create a new session and append it to the list
 
         :param timestamps: list of timestamps
         :param trajectory: list of coordinates
@@ -201,6 +208,15 @@ class SessionList:
         :param reward: list of rewards
         """
         self._sessions.append(Session(timestamps, trajectory, new_sampling_time, reward))
+
+    def append(self, s):
+        """
+        Append a session to the list
+
+        :param s: session
+        """
+        self._assert_session(s)
+        self._sessions.append(s)
 
     @property
     def all_trajectories(self):
@@ -239,10 +255,16 @@ class SessionList:
         return all_data
 
     def __getitem__(self, i):
-        return self._sessions[i]
+        sess = self._sessions[i]
+        if isinstance(i, slice):
+            return SessionList(sess)
+        return sess
 
     def __iter__(self):
         return iter(self._sessions)
+
+    def __len__(self):
+        return len(self._sessions)
 
     def to_list(self):
         """
@@ -264,6 +286,20 @@ class SessionList:
         for sd in sessions_list:
             sl._sessions.append(Session.from_dict(sd))
         return sl
+
+    @staticmethod
+    def _assert_session(s):
+        if type(s) is not Session:
+            raise RuntimeError("SessionList can only store objects of type Session")
+
+    def __add__(self, other):
+        """
+        :type other: SessionList
+        :rtype SessionList:
+        """
+        if type(other) is not SessionList:
+            raise RuntimeError("Can only add another SessionList to this SessionList")
+        return SessionList(self._sessions + other._sessions)
 
 
 def adjust_positions_to_maze(continuous_positions, maze):

@@ -76,8 +76,8 @@ class TestSessionList(unittest.TestCase):
 
     def test_session_list(self):
         slist = SessionList()
-        slist.append(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))), reward=list(range(0, 10)))
-        slist.append(np.zeros(10), list(zip(np.arange(10, 20), np.arange(10, 20))), reward=list(range(10, 20)))
+        slist.create(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))), reward=list(range(0, 10)))
+        slist.create(np.zeros(10), list(zip(np.arange(10, 20), np.arange(10, 20))), reward=list(range(10, 20)))
         npt.assert_allclose(slist.all_trajectories, list(zip(np.arange(0, 20), np.arange(0, 20))))
         npt.assert_allclose(slist.all_trajectories, slist[0].trajectory + slist[1].trajectory)
         npt.assert_allclose(slist.all_orientations, slist[0].orientations + slist[1].orientations)
@@ -85,8 +85,8 @@ class TestSessionList(unittest.TestCase):
 
     def test_save_load(self):
         sl1 = SessionList()
-        sl1.append(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))), reward=list(range(0, 10)))
-        sl1.append(np.zeros(10), list(zip(np.arange(10, 20), np.arange(10, 20))), reward=list(range(10, 20)))
+        sl1.create(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))), reward=list(range(0, 10)))
+        sl1.create(np.zeros(10), list(zip(np.arange(10, 20), np.arange(10, 20))), reward=list(range(10, 20)))
 
         sl_list = sl1.to_list()
         self.assertEqual(sl_list[0], sl1[0].to_dict())
@@ -98,3 +98,44 @@ class TestSessionList(unittest.TestCase):
         npt.assert_allclose(sl2.all_trajectories, sl1.all_trajectories)
         npt.assert_allclose(sl2.all_orientations, sl1.all_orientations)
         npt.assert_allclose(sl2.all_rewards, sl1.all_rewards)
+
+    def test_creation(self):
+        s = Session(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))))
+
+        sl = SessionList([])
+        self.assertEqual(len(sl), 0)
+
+        sl = SessionList(s)
+        self.assertEqual(len(sl), 1)
+
+        sl = SessionList([s, s])
+        self.assertEqual(len(sl), 2)
+
+        sl = SessionList(s, s)
+        self.assertEqual(len(sl), 2)
+
+        self.assertRaises(RuntimeError, SessionList, [s, 1])
+        self.assertRaises(RuntimeError, SessionList, s, 2)
+
+        self.assertRaises(RuntimeError, sl.append, 2)
+
+    def test_indexing(self):
+        slist = SessionList()
+        for _ in range(10):
+            slist.create(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))), reward=list(range(0, 10)))
+
+        self.assertEqual(type(slist[0]), Session)
+        sl = slist[5:7]
+        self.assertEqual(type(sl), SessionList)
+        self.assertEqual(len(sl), 2)
+
+    def test_add(self):
+        sl1 = SessionList()
+        for _ in range(10):
+            sl1.create(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))), reward=list(range(0, 10)))
+        sl2 = SessionList()
+        for _ in range(5):
+            sl2.create(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))), reward=list(range(0, 10)))
+
+        sl3 = sl1 + sl2
+        self.assertEqual(len(sl3), 15)
