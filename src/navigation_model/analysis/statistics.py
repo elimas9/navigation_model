@@ -112,3 +112,11 @@ class ResultsDistance:
         :return: 25th and 75th percentiles
         """
         return np.percentile(self._distances, 25), np.percentile(self._distances, 75)
+
+    def data(self):
+        """
+        Return the distance history
+
+        :return: list of distances
+        """
+        return self._distances

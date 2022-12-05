@@ -90,6 +90,17 @@ class MultiObjectiveFitness:
             res[k] = dist.percentile()
         return res
 
+    def data(self):
+        """
+        Get all distances by objective
+
+        :return: dictionary of list of distances
+        """
+        res = {}
+        for k, dist in self._distances.items():
+            res[k] = dist.data()
+        return res
+
     def medians_list(self):
         return list(self.medians().values())
 
@@ -101,3 +112,6 @@ class MultiObjectiveFitness:
 
     def percentiles_list(self):
         return list(self.percentiles().values())
+
+    def data_list(self):
+        return list(self.data().values())
