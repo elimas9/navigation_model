@@ -246,26 +246,9 @@ def tile_analysis(discrete_positions, maze, tiles=None):
     return perc, ratio, count
 
 
-@metric("orientations_histogram", "relative_orientations", "orientations_histogram_bins")
-def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, max_lim=None, possible_actions=None):
-    """
-    Compute the histogram of orientations and the relative orientation (when there is motion)
-
-    This can either produce evenly spaced bins (by specifying n_bins and max_lim) or uneven bins if possible_actions
-    are given.
-
-    :param absolute_orientations: list of absolute orientation
-    :param discrete_positions: list of discrete positions
-    :param n_bins: number of bins for the histogram
-    :param max_lim: orientation corresponding to the last bin
-    :param possible_actions: list of possible actions to create the bins
-    :return: histogram of orientations, relative orientations, bins for the histogram
-    """
-    if len(absolute_orientations) != len(discrete_positions):
-        raise RuntimeError(f"Wrong input sizes for hist_orientations {len(absolute_orientations)} != {len(discrete_positions)}")
-
+def _hist_orientation_commons(caller, n_bins=None, max_lim=None, possible_actions=None):
     if n_bins is not None and possible_actions is not None:
-        raise RuntimeError("Cannot use both n_bins and possible_actions in hist_orientations")
+        raise RuntimeError(f"Cannot use both n_bins and possible_actions in {caller}")
     if possible_actions is not None:
         # compute list of bin edges from possible actions
         possible_actions = np.array(possible_actions)
@@ -288,6 +271,29 @@ def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, ma
             bins = n_bins
         min_lim = max_lim - 2 * np.pi  # ~ -2.75 by default
 
+    return bins, min_lim, max_lim
+
+
+@metric("orientations_histogram", "relative_orientations", "orientations_histogram_bins")
+def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, max_lim=None, possible_actions=None):
+    """
+    Compute the histogram of orientations and the relative orientation (when there is motion)
+
+    This can either produce evenly spaced bins (by specifying n_bins and max_lim) or uneven bins if possible_actions
+    are given.
+
+    :param absolute_orientations: list of absolute orientation
+    :param discrete_positions: list of discrete positions
+    :param n_bins: number of bins for the histogram
+    :param max_lim: orientation corresponding to the last bin
+    :param possible_actions: list of possible actions to create the bins
+    :return: histogram of orientations, relative orientations, bins for the histogram
+    """
+    if len(absolute_orientations) != len(discrete_positions):
+        raise RuntimeError(f"Wrong input sizes for hist_orientations {len(absolute_orientations)} != {len(discrete_positions)}")
+
+    bins, min_lim, max_lim = _hist_orientation_commons("hist_orientations", n_bins, max_lim, possible_actions)
+
     relative_orientations = []
     for tim in range(0, len(absolute_orientations) - 1):
         rel_ori = absolute_orientations[tim + 1] - absolute_orientations[tim]
@@ -298,6 +304,48 @@ def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, ma
 
         if discrete_positions[tim + 1] != discrete_positions[tim]:
             relative_orientations.append(rel_ori)
+
+    histogram_orientations = np.histogram(relative_orientations, bins=bins, range=(min_lim, max_lim))
+
+    return histogram_orientations[0], relative_orientations, histogram_orientations[1]
+
+
+@metric("orientations_histogram", "relative_orientations", "orientations_histogram_bins")
+def hist_orientations_filtered(absolute_orientations, discrete_positions,
+                               maze, orientation_tiles_filter,
+                               n_bins=None, max_lim=None, possible_actions=None):
+    """
+    Compute the histogram of orientations and the relative orientation (when there is motion), but when the tile
+    type is in the orientation_tiles_filter list
+
+    This can either produce evenly spaced bins (by specifying n_bins and max_lim) or uneven bins if possible_actions
+    are given.
+
+    :param absolute_orientations: list of absolute orientation
+    :param discrete_positions: list of discrete positions
+    :param maze: maze
+    :param orientation_tiles_filter: list of tile types to select
+    :param n_bins: number of bins for the histogram
+    :param max_lim: orientation corresponding to the last bin
+    :param possible_actions: list of possible actions to create the bins
+    :return: histogram of orientations, relative orientations, bins for the histogram
+    """
+    if len(absolute_orientations) != len(discrete_positions):
+        raise RuntimeError(f"Wrong input sizes for hist_orientations_filtered {len(absolute_orientations)} != {len(discrete_positions)}")
+
+    bins, min_lim, max_lim = _hist_orientation_commons("hist_orientations_filtered", n_bins, max_lim, possible_actions)
+
+    relative_orientations = []
+    for tim in range(0, len(absolute_orientations) - 1):
+        if maze.get_tile(discrete_positions[tim]) in orientation_tiles_filter:
+            rel_ori = absolute_orientations[tim + 1] - absolute_orientations[tim]
+            if rel_ori > max_lim:
+                rel_ori = rel_ori - np.pi * 2
+            elif rel_ori < min_lim:
+                rel_ori = rel_ori - (-np.pi * 2)
+
+            if discrete_positions[tim + 1] != discrete_positions[tim]:
+                relative_orientations.append(rel_ori)
 
     histogram_orientations = np.histogram(relative_orientations, bins=bins, range=(min_lim, max_lim))
 

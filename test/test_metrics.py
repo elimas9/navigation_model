@@ -3,8 +3,8 @@ import numpy as np
 import numpy.testing as npt
 
 from navigation_model.analysis.metrics import Metric, Analyzer, metric, \
-    discretize_positions, occupancy_map, tile_analysis, hist_orientations, motion_analysis, hist_time_moving, \
-    subareas, mov_bouts, compute_orientations
+    discretize_positions, occupancy_map, tile_analysis, hist_orientations, hist_orientations_filtered,\
+    motion_analysis, hist_time_moving, subareas, mov_bouts, compute_orientations
 
 from navigation_model.simulation.maze import Maze
 
@@ -178,6 +178,18 @@ class TestMetricFunctions(unittest.TestCase):
         npt.assert_allclose(ho, np.array([0, 0, 0, 2]))
         npt.assert_allclose(ro, [-3.0 + 2 * np.pi, 3.0])
         npt.assert_allclose(hob, np.linspace(-3/4 * np.pi, 5/4 * np.pi, 5))
+
+    def test_hist_orientations_filtered(self):
+        # check sizes
+        self.assertRaises(RuntimeError, hist_orientations, [], [1])
+
+        # normal execution
+        ori = [0., -3.0, -3.0, -3.0, 0.0]
+        dpos = [(0, 0), (1, 1), (1, 0), (0, 0), (0, 1)]
+        ho, ro, hob = hist_orientations_filtered(ori, dpos, self.maze, [self.maze.MazeTile.CORNER])
+        self.assertEqual(np.sum(ho), 2)
+        npt.assert_allclose(hob, np.linspace(-0.875 * np.pi, 1.125 * np.pi, 9))
+        npt.assert_allclose(ro, [-3.0 + 2 * np.pi, 3.0])
 
     def test_count_moving(self):
         pos_list = [(0, 0), (1, 1), (0, 0), (0, 0)]
