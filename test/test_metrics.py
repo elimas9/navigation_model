@@ -153,18 +153,31 @@ class TestMetricFunctions(unittest.TestCase):
         # normal execution
         ori = [0., -3.0, 0.0]
         dpos = range(len(ori))
-        ho, do, hob = hist_orientations(ori, dpos)
+        ho, ro, hob = hist_orientations(ori, dpos)
         npt.assert_allclose(ho, np.array([0, 0, 0, 0, 0, 0, 0, 2]))
         npt.assert_allclose(hob, np.linspace(-0.875 * np.pi, 1.125 * np.pi, 9))
-        npt.assert_allclose(do, [-3.0 + 2 * np.pi, 3.0])
+        npt.assert_allclose(ro, [-3.0 + 2 * np.pi, 3.0])
 
         # no movement
         ori = np.random.rand(5)
         dpos = [2] * len(ori)
-        ho, do, hob = hist_orientations(ori, dpos)
+        ho, ro, hob = hist_orientations(ori, dpos)
         npt.assert_allclose(ho, np.zeros(8))
         npt.assert_allclose(hob, np.linspace(-0.875 * np.pi, 1.125 * np.pi, 9))
-        self.assertEqual(0, len(do))
+        self.assertEqual(0, len(ro))
+
+        # bins created from possible actions
+        possible_actions = [(1, 0),
+                            (2, 0),
+                            (-1, 0),
+                            (0, -1),
+                            (0, 1)]
+        ori = [0., -3.0, 0.0]
+        dpos = range(len(ori))
+        ho, ro, hob = hist_orientations(ori, dpos, possible_actions=possible_actions)
+        npt.assert_allclose(ho, np.array([0, 0, 0, 2]))
+        npt.assert_allclose(ro, [-3.0 + 2 * np.pi, 3.0])
+        npt.assert_allclose(hob, np.linspace(-3/4 * np.pi, 5/4 * np.pi, 5))
 
     def test_count_moving(self):
         pos_list = [(0, 0), (1, 1), (0, 0), (0, 0)]

@@ -247,20 +247,46 @@ def tile_analysis(discrete_positions, maze, tiles=None):
 
 
 @metric("orientations_histogram", "relative_orientations", "orientations_histogram_bins")
-def hist_orientations(absolute_orientations, discrete_positions, n_bins=8, max_lim=np.pi * 1.125):
+def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, max_lim=None, possible_actions=None):
     """
     Compute the histogram of orientations and the relative orientation (when there is motion)
+
+    This can either produce evenly spaced bins (by specifying n_bins and max_lim) or uneven bins if possible_actions
+    are given.
 
     :param absolute_orientations: list of absolute orientation
     :param discrete_positions: list of discrete positions
     :param n_bins: number of bins for the histogram
     :param max_lim: orientation corresponding to the last bin
+    :param possible_actions: list of possible actions to create the bins
     :return: histogram of orientations, relative orientations, bins for the histogram
     """
     if len(absolute_orientations) != len(discrete_positions):
-        raise RuntimeError(f"Wrong input sizes for hist_rotations {len(absolute_orientations)} != {len(discrete_positions)}")
+        raise RuntimeError(f"Wrong input sizes for hist_orientations {len(absolute_orientations)} != {len(discrete_positions)}")
 
-    min_lim = max_lim - 2 * np.pi  # ~ -2.75 by default
+    if n_bins is not None and possible_actions is not None:
+        raise RuntimeError("Cannot use both n_bins and possible_actions in hist_orientations")
+    if possible_actions is not None:
+        # compute list of bin edges from possible actions
+        possible_actions = np.array(possible_actions)
+        angles = np.arctan2(possible_actions[:, 1], possible_actions[:, 0])
+        angles = np.sort(angles)
+        angles = np.unique(angles)
+        bins = [(angles[-1] - 2 * np.pi + angles[0]) / 2]
+        for i in range(len(angles) - 1):
+            bins.append((angles[i] + angles[i + 1]) / 2)
+
+        bins.append((angles[0] + 2 * np.pi + angles[-1]) / 2)
+        max_lim = bins[-1]
+        min_lim = bins[0]
+    else:
+        if max_lim is None:
+            max_lim = np.pi * 1.125
+        if n_bins is None:
+            bins = 8
+        else:
+            bins = n_bins
+        min_lim = max_lim - 2 * np.pi  # ~ -2.75 by default
 
     relative_orientations = []
     for tim in range(0, len(absolute_orientations) - 1):
@@ -273,7 +299,7 @@ def hist_orientations(absolute_orientations, discrete_positions, n_bins=8, max_l
         if discrete_positions[tim + 1] != discrete_positions[tim]:
             relative_orientations.append(rel_ori)
 
-    histogram_orientations = np.histogram(relative_orientations, bins=n_bins, range=(min_lim, max_lim))
+    histogram_orientations = np.histogram(relative_orientations, bins=bins, range=(min_lim, max_lim))
 
     return histogram_orientations[0], relative_orientations, histogram_orientations[1]
 
