@@ -145,3 +145,13 @@ class TestSessionList(unittest.TestCase):
 
         sl5 = 4 * sl2
         self.assertEqual(len(sl5), 20)
+
+    def test_flatten(self):
+        slist = SessionList()
+        slist.create(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))), reward=list(range(0, 10)))
+        slist.create(np.zeros(10), list(zip(np.arange(10, 20), np.arange(10, 20))), reward=list(range(10, 20)))
+        s = slist.flatten()
+        npt.assert_allclose(s.trajectory, slist[0].trajectory + slist[1].trajectory)
+        npt.assert_allclose(s.reward, slist[0].reward + slist[1].reward)
+        npt.assert_allclose(s.sampling_time, slist[0].sampling_time)
+        npt.assert_allclose(s.orientations, slist[0].orientations + slist[1].orientations)

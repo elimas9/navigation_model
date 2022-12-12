@@ -319,6 +319,19 @@ class SessionList:
             raise RuntimeError("Can only multiply SessionList to an int")
         return SessionList(self._sessions * times)
 
+    def flatten(self):
+        """
+        Flatten the SessionList into a single Session
+
+        :return: Session
+        """
+        news = Session.__new__(Session)
+        news._trajectory = self.all_trajectories
+        news._reward = self.all_rewards
+        news._sampling_t = np.mean([s.sampling_time for s in self._sessions])
+        news._orientations = self.all_orientations
+        return news
+
 
 def adjust_positions_to_maze(continuous_positions, maze):
     """
