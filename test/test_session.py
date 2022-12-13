@@ -83,6 +83,15 @@ class TestSessionList(unittest.TestCase):
         npt.assert_allclose(slist.all_orientations, slist[0].orientations + slist[1].orientations)
         npt.assert_allclose(slist.all_rewards, slist[0].reward + slist[1].reward)
 
+        # no reward
+        slist = SessionList()
+        slist.create(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))))
+        slist.create(np.zeros(10), list(zip(np.arange(10, 20), np.arange(10, 20))))
+        npt.assert_allclose(slist.all_trajectories, list(zip(np.arange(0, 20), np.arange(0, 20))))
+        npt.assert_allclose(slist.all_trajectories, slist[0].trajectory + slist[1].trajectory)
+        npt.assert_allclose(slist.all_orientations, slist[0].orientations + slist[1].orientations)
+        self.assertIsNone(slist.all_rewards)
+
     def test_save_load(self):
         sl1 = SessionList()
         sl1.create(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))), reward=list(range(0, 10)))

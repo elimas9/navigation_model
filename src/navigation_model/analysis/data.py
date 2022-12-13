@@ -239,7 +239,10 @@ class SessionList:
         """
         all_data = []
         for s in self._sessions:
-            all_data += s.reward
+            if s.has_reward:
+                all_data += s.reward
+            else:
+                return None
         return all_data
 
     @property
