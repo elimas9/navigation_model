@@ -69,12 +69,15 @@ def plot_map(ax, map_data, maze=None, cmap=None, norm=None, title=None):
         cmap = matplotlib.cm.get_cmap()
     if maze is None:
         data = map_data
+        extent = None
     else:
         data = copy.deepcopy(map_data)
         bad_coords = maze.get_non_visitable_coordinates()
         for x, y in bad_coords:
             data[x, y] = np.nan
         cmap.set_bad(color='white')
+        extent = [0, maze.size_x * maze.size_tile,
+                  0, maze.size_y * maze.size_tile]
     # remove border
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
@@ -82,7 +85,7 @@ def plot_map(ax, map_data, maze=None, cmap=None, norm=None, title=None):
         spine.set_visible(False)
     if title is not None:
         ax.set_title(title)
-    return ax.imshow(data.transpose(), origin="lower", cmap=cmap, norm=norm)
+    return ax.imshow(data.transpose(), origin="lower", cmap=cmap, norm=norm, extent=extent)
 
 
 def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, subplots_ratio=20, titles=None):
