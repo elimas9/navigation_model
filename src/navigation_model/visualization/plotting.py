@@ -88,7 +88,7 @@ def plot_map(ax, map_data, maze=None, cmap=None, norm=None, title=None):
     return ax.imshow(data.transpose(), origin="lower", cmap=cmap, norm=norm, extent=extent)
 
 
-def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, subplots_ratio=20, titles=None):
+def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, norm=None, subplots_ratio=20, titles=None):
     """
     Plot multiple maps (V table, occupancy map, etc) with a global colorbar
 
@@ -100,6 +100,7 @@ def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, subplots_
     :param columns: columns for the arrangment
     :param maze: optional maze
     :param cmap: colormap
+    :param norm: normalization
     :param subplots_ratio: ratio of subplots over colorbar
     :param titles: set titles to maps
     :return: np.arry of axes (shape=rows x columns)
@@ -112,9 +113,10 @@ def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, subplots_
     elif len(titles) < len(maps):
         titles = titles + [None] * (len(maps) - len(titles))
 
-    vmax = np.max(maps)
-    vmin = np.min(maps)
-    norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+    if norm is None:
+        vmax = np.max(maps)
+        vmin = np.min(maps)
+        norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
 
     main_gs = matplotlib.gridspec.GridSpec(1, 2, figure=fig, width_ratios=[subplots_ratio, 1])
     cax = fig.add_subplot(main_gs[1])
