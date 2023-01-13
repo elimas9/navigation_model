@@ -51,7 +51,7 @@ def plot_reward_events(ax, reward_events, marker="x", c="r"):
     return ax.scatter(reward_events[:, 0], reward_events[:, 1], c=c, marker=marker, zorder=3)
 
 
-def plot_map(ax, map_data, maze=None, cmap=None, norm=None, title=None):
+def plot_map(ax, map_data, maze=None, cmap=None, norm=None, title=None, imshow_args=None):
     """
     Plot a map (V table, occupancy map, etc)
 
@@ -63,6 +63,7 @@ def plot_map(ax, map_data, maze=None, cmap=None, norm=None, title=None):
     :param cmap: color map
     :param norm: normalization
     :param title: axis title
+    :param imshow_args: dictionary of parameters passed to matplotlib.imshow
     :return: AxesImage object
     """
     if cmap is None:
@@ -85,10 +86,13 @@ def plot_map(ax, map_data, maze=None, cmap=None, norm=None, title=None):
         spine.set_visible(False)
     if title is not None:
         ax.set_title(title)
-    return ax.imshow(data.transpose(), origin="lower", cmap=cmap, norm=norm, extent=extent)
+    if imshow_args is None:
+        imshow_args = {}
+    return ax.imshow(data.transpose(), origin="lower", cmap=cmap, norm=norm, extent=extent, **imshow_args)
 
 
-def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, norm=None, subplots_ratio=20, titles=None):
+def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, norm=None, subplots_ratio=20, titles=None,
+                       imshow_args=None, colorbar_args=None):
     """
     Plot multiple maps (V table, occupancy map, etc) with a global colorbar
 
@@ -104,6 +108,8 @@ def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, norm=None
     :param subplots_ratio: ratio of subplots over colorbar
     :param titles: set titles to maps
     :return: np.arry of axes (shape=rows x columns)
+    :param imshow_args: dictionary of parameters passed to matplotlib.imshow
+    :param colorbar_args: dictionary of parameters passed to matplotlib.colorbar
     """
     if rows * columns < len(maps):
         raise RuntimeError("Not enough rows and columns specified!")
@@ -133,16 +139,18 @@ def plot_multiple_maps(fig, maps, rows, columns, maze=None, cmap=None, norm=None
                 else:
                     ax = fig.add_subplot(v_grid[r, c])
                     v = maps[idx]
-                    plot_map(ax, v, maze=maze, cmap=cmap, norm=norm, title=titles[idx])
+                    plot_map(ax, v, maze=maze, cmap=cmap, norm=norm, title=titles[idx], imshow_args=imshow_args)
                     row_axs.append(ax)
             axs.append(row_axs)
     else:
         for i, v in enumerate(maps):
             ax = fig.add_subplot(v_grid[i])
-            plot_map(ax, v, maze=maze, cmap=cmap, norm=norm, title=titles[i])
+            plot_map(ax, v, maze=maze, cmap=cmap, norm=norm, title=titles[i], imshow_args=imshow_args)
             axs.append(ax)
 
-    fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax)
+    if colorbar_args is None:
+        colorbar_args = {}
+    fig.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax, **colorbar_args)
 
     return np.array(axs)
 
