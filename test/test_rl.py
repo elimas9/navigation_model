@@ -1,3 +1,4 @@
+import copy
 import unittest
 import numpy as np
 
@@ -18,10 +19,12 @@ class TestAlgorithms(unittest.TestCase):
         neighb = [(1, 0), (0, 1), (2, 1), (1, 2)]
         r = 1
 
-        alg_update = alg.get_update(v, s, neighb, r)
+        alg.v_table = copy.copy(v)
+        alg_update = alg.update(s, neighb, r)
         dv = discount_rate * np.max([v[s] for s in neighb])
         dv = alpha * (r + dv - v[s])
         self.assertEqual(alg_update, dv)
+        self.assertEqual(alg.v_table[s], v[s] + dv)
 
     def test_negative_conditioning(self):
 
@@ -35,10 +38,12 @@ class TestAlgorithms(unittest.TestCase):
         neighb = [(1, 0), (0, 1), (2, 1), (1, 2)]
         r = -1
 
-        alg_update = alg.get_update(v, s, neighb, r)
+        alg.v_table = copy.copy(v)
+        alg_update = alg.update(s, neighb, r)
         dv = discount_rate * np.min([v[s] for s in neighb])
         dv = alpha * (r + dv - v[s])
         self.assertEqual(alg_update, dv)
+        self.assertEqual(alg.v_table[s], v[s] + dv)
 
     def test_td0(self):
 
@@ -52,6 +57,8 @@ class TestAlgorithms(unittest.TestCase):
         s1 = (np.random.randint(0, 3), np.random.randint(0, 3))
         r = 1
 
-        alg_update = alg.get_update(v, s, s1, r)
+        alg.v_table = copy.copy(v)
+        alg_update = alg.update(s, s1, r)
         dv = alpha * (r + discount_rate * v[s1] - v[s])
         self.assertEqual(alg_update, dv)
+        self.assertEqual(alg.v_table[s], v[s] + dv)

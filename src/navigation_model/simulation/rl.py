@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 
 
@@ -10,7 +12,7 @@ class ConditioningExperiment:
     Replays can be performed after one or multiple runs.
     """
 
-    def __init__(self, maze, algorithm, replay_strategy, v_table=None, debug=False):
+    def __init__(self, maze, algorithm, replay_strategy=None, v_table=None, debug=False):
         """
         Create the replay experiment
 
@@ -27,22 +29,21 @@ class ConditioningExperiment:
         self._alg = algorithm
 
         if v_table is not None:
-            self._v_table = v_table
+            self._alg.v_table = v_table
         else:
-            self._v_table = np.zeros(self._maze.shape)
+            self._alg.v_table = np.zeros(self._maze.shape)
 
         self._replay_strategy = replay_strategy
-        self._replay_buffer = []
 
         self._debug = debug
 
-    def run(self, trajectory, reward, do_replays=0):
+    def run(self, trajectory, reward, do_replays=False):
         """
         Run the experiment for a certain trajectory and with a certain reward
 
         :param trajectory: predetermined path to follow (list of continuous positions)
         :param reward: reward obtained at each step (list of rewards)
-        :param do_replays: number of replay sequences
+        :param do_replays: if True, perform offline replay after the run
         """
         # checks
         if len(trajectory) != len(reward):
@@ -55,69 +56,66 @@ class ConditioningExperiment:
             s1 = self._maze.get_closest_visitable_cont(cs1)
             r = reward[i]
 
-            dv, to_buffer = self._alg.get_update_and_to_buffer(self._v_table, cs, s, cs1, s1, r)
-            self._v_table[s[0], s[1]] += dv
-            self._replay_buffer.append((s, to_buffer, r))
+            to_buffer = self._alg.update_and_to_buffer(cs, s, cs1, s1, r)
+            self._replay_strategy.append((s, to_buffer, r))
 
             cs = cs1
             s = s1
 
-        self.do_replays(n_times=do_replays)
+        if do_replays:
+            if self._replay_strategy is None:
+                print("Asked to do replay, but no replay strategy given", file=sys.stderr)
+            else:
+                self._replay_strategy.offline_replays(self._alg)
 
-    def do_replays(self, n_times):
+    def do_replays(self):
         """
         Perform replays depending on the replay type
-
-        :param n_times: number of times the whole sequence is replayed
         """
-        for _ in range(n_times):
-            buffer = self._replay_strategy(self._replay_buffer)
-            for s, s1, r in buffer:
-                dv = self._alg.get_update(self._v_table, s, s1, r)
-                self._v_table[s[0], s[1]] += dv
-
-    def reset_replay_buffer(self):
-        """
-        Reset the replay buffer
-        """
-        self._replay_buffer = []
-
-    @property
-    def replay_buffer(self):
-        return self._replay_buffer
+        self._replay_strategy.offline_replays(self._alg)
 
     @property
     def v_table(self):
-        return self._v_table
+        return self._alg.v_table
 
 
 ############
 # algorithms
 class RLAlgorithm:
 
-    def get_update_and_to_buffer(self, v_table, cs, s, cs1, s1, r):
+    def __init__(self):
+        self._v_table = None
+
+    @property
+    def v_table(self):
+        if self._v_table is None:
+            raise RuntimeError("V-table not initialized")
+        return self._v_table
+
+    @v_table.setter
+    def v_table(self, v_table):
+        self._v_table = v_table
+
+    def update_v_table(self, s, dv):
+        self._v_table[s[0], s[1]] += dv
+
+    def update_and_to_buffer(self, cs, s, cs1, s1, r):
         """
-        Returns the computed update to V(s) and the value to store in the buffer for replays
+        Updates V(s) based on the current transition and returns a value to put in the replay buffer
 
-        The returned update should be added to V(s).
-
-        :param v_table: current V table
         :param cs: continuous starting position
         :param s: starting state
         :param cs1: continuous arrival position
         :param s1: arrival state
         :param r: reward
-        :return: update to V(s), value to store in the buffer
+        :return: value to store in the buffer
         """
         raise NotImplementedError()
 
-    def get_update(self, v_table, s, s1, r):
+    def update(self, s, s1, r):
         """
-        Returns the computed update to V(s)
+        Updates V(s) based on the current transition
 
-        The returned update should be added to V(s).
-
-        :param v_table: current V table
         :param s: starting state
         :param s1: list of arrival states
         :param r: reward
@@ -142,27 +140,29 @@ class PositiveConditioning(RLAlgorithm):
         :param mouse: the mouse
         :param maze: the maze
         """
+        super().__init__()
         self._alpha = alpha
         self._discount_rate = discount_rate
         self._mouse = mouse
         self._maze = maze
 
-    def get_update_and_to_buffer(self, v_table, cs, s, cs1, s1, r):
+    def update_and_to_buffer(self, cs, s, cs1, s1, r):
         self._mouse.move_to(cs)
         endpoints = self._mouse.get_endpoints()
         next_states = self._maze.cont2disc_list(endpoints)
         are_visitable = self._maze.are_visitable(next_states)
         next_states = [ns for i, ns in enumerate(next_states) if are_visitable[i]]
 
-        dv = self.get_update(v_table, s, next_states, r)
+        self.update(s, next_states, r)
 
         self._mouse.move_to(cs1)
 
-        return dv, next_states
+        return next_states
 
-    def get_update(self, v_table, s, s1, r):
-        dv = self._discount_rate * np.max([v_table[es[0], es[1]] for es in s1])
-        dv = self._alpha * (r + dv - v_table[s[0], s[1]])
+    def update(self, s, s1, r):
+        dv = self._discount_rate * np.max([self._v_table[es[0], es[1]] for es in s1])
+        dv = self._alpha * (r + dv - self._v_table[s[0], s[1]])
+        self.update_v_table(s, dv)
         return dv
 
 
@@ -182,27 +182,29 @@ class NegativeConditioning(RLAlgorithm):
         :param mouse: the mouse
         :param maze: the maze
         """
+        super().__init__()
         self._alpha = alpha
         self._discount_rate = discount_rate
         self._mouse = mouse
         self._maze = maze
 
-    def get_update_and_to_buffer(self, v_table, cs, s, cs1, s1, r):
+    def update_and_to_buffer(self, cs, s, cs1, s1, r):
         self._mouse.move_to(cs)
         endpoints = self._mouse.get_endpoints()
         next_states = self._maze.cont2disc_list(endpoints)
         are_visitable = self._maze.are_visitable(next_states)
         next_states = [ns for i, ns in enumerate(next_states) if are_visitable[i]]
 
-        dv = self.get_update(v_table, s, next_states, r)
+        self.update(s, next_states, r)
 
         self._mouse.move_to(cs1)
 
-        return dv, next_states
+        return next_states
 
-    def get_update(self, v_table, s, s1, r):
-        dv = self._discount_rate * np.min([v_table[es[0], es[1]] for es in s1])
-        dv = self._alpha * (r + dv - v_table[s[0], s[1]])
+    def update(self, s, s1, r):
+        dv = self._discount_rate * np.min([self._v_table[es[0], es[1]] for es in s1])
+        dv = self._alpha * (r + dv - self._v_table[s[0], s[1]])
+        self.update_v_table(s, dv)
         return dv
 
 
@@ -218,28 +220,73 @@ class TD0(RLAlgorithm):
         :param alpha:
         :param discount_rate:
         """
+        super().__init__()
         self._alpha = alpha
         self._discount_rate = discount_rate
 
-    def get_update_and_to_buffer(self, v_table, cs, s, cs1, s1, r):
-        dv = self.get_update(v_table, s, s1, r)
-        return dv, s1
+    def update_and_to_buffer(self, cs, s, cs1, s1, r):
+        self.update(s, s1, r)
+        return s1
 
-    def get_update(self, v_table, s, s1, r):
-        return self._alpha * (r + self._discount_rate * v_table[s1[0], s1[1]] - v_table[s[0], s[1]])
+    def update(self, s, s1, r):
+        dv = self._alpha * (r + self._discount_rate * self._v_table[s1[0], s1[1]] - self._v_table[s[0], s[1]])
+        self.update_v_table(s, dv)
+        return dv
 
 
 ###################
 # replay strategies
-class ShuffledReplays:
+class ReplayStrategy:
+    """
+    Base class for replay strategies
+    """
+
+    def append(self, update):
+        """
+        Add an update transition to the buffer
+        """
+        raise NotImplementedError
+
+    def clear_buffer(self):
+        """
+        Reset the replay buffer
+        """
+        raise NotImplementedError
+
+    def offline_replays(self, alg):
+        """
+        Do replays with the current strategy
+        """
+        raise NotImplementedError
+
+class ShuffledReplays(ReplayStrategy):
     """
     Shuffle the replay buffer
-
-    This method modifies the original buffer!
     """
-    def __init__(self, seed=None):
+    def __init__(self, n_times, seed=None):
+        """
+        Create a shuffled replay strategy
+
+        :param n_times: number of times the full sequence is presented
+        :param seed: seed
+        """
+        super().__init__()
+
+        self._n_times = n_times
+        self._buffer = []
         self._rng = np.random.default_rng(seed)
 
-    def __call__(self, buffer):
-        self._rng.shuffle(buffer)
-        return buffer
+    def append(self, update):
+        self._buffer.append(update)
+
+    def clear_buffer(self):
+        self._buffer = []
+
+    def offline_replays(self, alg):
+        """
+        Do replays with the current strategy
+        """
+        for _ in range(self._n_times):
+            self._rng.shuffle(self._buffer)
+            for s, s1, r in self._buffer:
+                alg.update(s, s1, r)
