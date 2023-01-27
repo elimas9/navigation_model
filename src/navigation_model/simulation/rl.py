@@ -1,6 +1,34 @@
 import sys
+from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
+
+############
+# types
+@dataclass
+class Transition:
+    """
+    Class representing a transition
+    """
+    cs: Any = None                             # starting continuous position
+    ori: Any = None                            # starting orientation
+    s: Any = None                              # starting discrete position
+    cs1: Any = None                            # arriving continuous position
+    ori1: Any = None                           # arriving orientation
+    s1: Any = None                             # arriving discrete state
+    r: Any = None                              # reward
+    extra: dict = field(default_factory=dict)  # dictionary that can be used by different algorithms for extra info
+
+# update type
+@dataclass
+class Update:
+    """
+    Class representing a value update caused by a transition
+    """
+    transition: Transition = None # transition that caused the update
+    dv: Any = None                # value update
+    rpe: Any = None               # reward prediction error (absolute)
 
 
 class ConditioningExperiment:
@@ -37,11 +65,12 @@ class ConditioningExperiment:
 
         self._debug = debug
 
-    def run(self, trajectory, reward, do_replays=False):
+    def run(self, trajectory, orientations, reward, do_replays=False):
         """
         Run the experiment for a certain trajectory and with a certain reward
 
         :param trajectory: predetermined path to follow (list of continuous positions)
+        :param orientations: orientations of the mouse in the path (list of continuous orientations)
         :param reward: reward obtained at each step (list of rewards)
         :param do_replays: if True, perform offline replay after the run
         """
@@ -50,17 +79,23 @@ class ConditioningExperiment:
             raise RuntimeError("trajectory and reward must have the same length")
 
         cs = trajectory[0]
+        ori = orientations[0]
         s = self._maze.get_closest_visitable_cont(cs)
         for i in range(1, len(trajectory)):
-            cs1 = trajectory[i]
-            s1 = self._maze.get_closest_visitable_cont(cs1)
-            r = reward[i]
+            t = Transition(cs=cs,
+                           ori=ori,
+                           s=s,
+                           cs1=trajectory[i],
+                           ori1=orientations[i],
+                           s1=self._maze.get_closest_visitable_cont(trajectory[i]),
+                           r=reward[i])
 
-            to_buffer = self._alg.update_and_to_buffer(cs, s, cs1, s1, r)
-            self._replay_strategy.append((s, to_buffer, r))
+            update = self._alg.update(t)
+            self._replay_strategy.append(update)
 
-            cs = cs1
-            s = s1
+            cs = t.cs1
+            ori = t.ori1
+            s = t.s1
 
         if do_replays:
             if self._replay_strategy is None:
@@ -99,30 +134,14 @@ class RLAlgorithm:
     def update_v_table(self, s, dv):
         self._v_table[s[0], s[1]] += dv
 
-    def update_and_to_buffer(self, cs, s, cs1, s1, r):
+    def update(self, t):
         """
         Updates V(s) based on the current transition and returns a value to put in the replay buffer
 
-        :param cs: continuous starting position
-        :param s: starting state
-        :param cs1: continuous arrival position
-        :param s1: arrival state
-        :param r: reward
-        :return: value to store in the buffer
+        :param t: Transition
+        :return: Update to store in the buffer
         """
         raise NotImplementedError()
-
-    def update(self, s, s1, r):
-        """
-        Updates V(s) based on the current transition
-
-        :param s: starting state
-        :param s1: list of arrival states
-        :param r: reward
-        :return: update to V(s)
-        """
-        raise NotImplementedError()
-
 
 class PositiveConditioning(RLAlgorithm):
     """
@@ -146,24 +165,25 @@ class PositiveConditioning(RLAlgorithm):
         self._mouse = mouse
         self._maze = maze
 
-    def update_and_to_buffer(self, cs, s, cs1, s1, r):
-        self._mouse.move_to(cs)
-        endpoints = self._mouse.get_endpoints()
-        next_states = self._maze.cont2disc_list(endpoints)
-        are_visitable = self._maze.are_visitable(next_states)
-        next_states = [ns for i, ns in enumerate(next_states) if are_visitable[i]]
+    def update(self, t):
+        if "next_states" not in t.extra:
+            self._mouse.move_to(t.cs)
+            endpoints = self._mouse.get_endpoints()
+            next_states = self._maze.cont2disc_list(endpoints)
+            are_visitable = self._maze.are_visitable(next_states)
+            t.extra["next_states"] = [ns for i, ns in enumerate(next_states) if are_visitable[i]]
 
-        self.update(s, next_states, r)
+        dv = self._discount_rate * np.max([self._v_table[es[0], es[1]] for es in t.extra["next_states"]])
+        rpe = t.r + dv - self._v_table[t.s[0], t.s[1]]
+        dv = self._alpha * rpe
+        self.update_v_table(t.s, dv)
 
-        self._mouse.move_to(cs1)
+        self._mouse.move_to(t.cs1)
 
-        return next_states
-
-    def update(self, s, s1, r):
-        dv = self._discount_rate * np.max([self._v_table[es[0], es[1]] for es in s1])
-        dv = self._alpha * (r + dv - self._v_table[s[0], s[1]])
-        self.update_v_table(s, dv)
-        return dv
+        # create update
+        return Update(transition=t,
+                      dv=dv,
+                      rpe=abs(rpe))
 
 
 class NegativeConditioning(RLAlgorithm):
@@ -188,24 +208,25 @@ class NegativeConditioning(RLAlgorithm):
         self._mouse = mouse
         self._maze = maze
 
-    def update_and_to_buffer(self, cs, s, cs1, s1, r):
-        self._mouse.move_to(cs)
-        endpoints = self._mouse.get_endpoints()
-        next_states = self._maze.cont2disc_list(endpoints)
-        are_visitable = self._maze.are_visitable(next_states)
-        next_states = [ns for i, ns in enumerate(next_states) if are_visitable[i]]
+    def update(self, t):
+        if "next_states" not in t.extra:
+            self._mouse.move_to(t.cs)
+            endpoints = self._mouse.get_endpoints()
+            next_states = self._maze.cont2disc_list(endpoints)
+            are_visitable = self._maze.are_visitable(next_states)
+            t.extra["next_states"] = [ns for i, ns in enumerate(next_states) if are_visitable[i]]
 
-        self.update(s, next_states, r)
+        dv = self._discount_rate * np.min([self._v_table[es[0], es[1]] for es in t.extra["next_states"]])
+        rpe = t.r + dv - self._v_table[t.s[0], t.s[1]]
+        dv = self._alpha * rpe
+        self.update_v_table(t.s, dv)
 
-        self._mouse.move_to(cs1)
+        self._mouse.move_to(t.cs1)
 
-        return next_states
-
-    def update(self, s, s1, r):
-        dv = self._discount_rate * np.min([self._v_table[es[0], es[1]] for es in s1])
-        dv = self._alpha * (r + dv - self._v_table[s[0], s[1]])
-        self.update_v_table(s, dv)
-        return dv
+        # create update
+        return Update(transition=t,
+                      dv=dv,
+                      rpe=abs(rpe))
 
 
 class TD0(RLAlgorithm):
@@ -224,14 +245,13 @@ class TD0(RLAlgorithm):
         self._alpha = alpha
         self._discount_rate = discount_rate
 
-    def update_and_to_buffer(self, cs, s, cs1, s1, r):
-        self.update(s, s1, r)
-        return s1
-
-    def update(self, s, s1, r):
-        dv = self._alpha * (r + self._discount_rate * self._v_table[s1[0], s1[1]] - self._v_table[s[0], s[1]])
-        self.update_v_table(s, dv)
-        return dv
+    def update(self, t):
+        rpe = t.r + self._discount_rate * self._v_table[t.s1[0], t.s1[1]] - self._v_table[t.s[0], t.s[1]]
+        dv = self._alpha * rpe
+        self.update_v_table(t.s, dv)
+        return Update(transition=t,
+                      dv=dv,
+                      rpe=abs(rpe))
 
 
 ###################
@@ -258,6 +278,7 @@ class ReplayStrategy:
         Do replays with the current strategy
         """
         raise NotImplementedError
+
 
 class ShuffledReplays(ReplayStrategy):
     """
@@ -288,5 +309,6 @@ class ShuffledReplays(ReplayStrategy):
         """
         for _ in range(self._n_times):
             self._rng.shuffle(self._buffer)
-            for s, s1, r in self._buffer:
-                alg.update(s, s1, r)
+            for update in self._buffer:
+                alg.update(update.transition)
+
