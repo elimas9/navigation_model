@@ -4,6 +4,7 @@ from typing import Any
 
 import numpy as np
 
+
 ############
 # types
 @dataclass
@@ -20,15 +21,16 @@ class Transition:
     r: Any = None                              # reward
     extra: dict = field(default_factory=dict)  # dictionary that can be used by different algorithms for extra info
 
+
 # update type
 @dataclass
 class Update:
     """
     Class representing a value update caused by a transition
     """
-    transition: Transition = None # transition that caused the update
-    dv: Any = None                # value update
-    rpe: Any = None               # reward prediction error (absolute)
+    transition: Transition = None  # transition that caused the update
+    dv: Any = None                 # value update
+    rpe: Any = None                # reward prediction error (absolute)
 
 
 class ConditioningExperiment:
@@ -44,7 +46,7 @@ class ConditioningExperiment:
         """
         Create the replay experiment
 
-        If v_table is used then the learning is "continuning" from that table.
+        If v_table is used then the learning is "continuing" from that table.
 
         :param maze: the maze
         :param algorithm: RL algorithm to use
@@ -107,7 +109,10 @@ class ConditioningExperiment:
         """
         Perform replays depending on the replay type
         """
-        self._replay_strategy.offline_replays(self._alg)
+        if self._replay_strategy is None:
+            print("Asked to do replay, but no replay strategy given", file=sys.stderr)
+        else:
+            self._replay_strategy.offline_replays(self._alg)
 
     @property
     def v_table(self):
@@ -142,6 +147,7 @@ class RLAlgorithm:
         :return: Update to store in the buffer
         """
         raise NotImplementedError()
+
 
 class PositiveConditioning(RLAlgorithm):
     """
@@ -304,11 +310,7 @@ class ShuffledReplays(ReplayStrategy):
         self._buffer = []
 
     def offline_replays(self, alg):
-        """
-        Do replays with the current strategy
-        """
         for _ in range(self._n_times):
             self._rng.shuffle(self._buffer)
             for update in self._buffer:
                 alg.update(update.transition)
-
