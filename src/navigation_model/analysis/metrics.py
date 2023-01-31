@@ -376,7 +376,7 @@ def hist_time_moving(moving_bool_list):
     """
     Compute a histogram of move/not move actions
 
-    Returns a list of actions (n_steps, action_type) where action_type is True if moving, False if not moving and
+    Returns a list of actions (n_steps, action_type) where action_type is 1 if moving, 0 if not moving and
     n_steps is the duration of the action.
 
     :param moving_bool_list: boolean list of moving/not moving
@@ -431,6 +431,23 @@ def mov_bouts(histogram_time_moving):
         elif b[0] > median_period and b[1] == 0:
             stop += b[0]
     return mov, stop
+
+
+@metric("static_intervals")
+def compute_static_intervals(histogram_time_moving):
+    """
+    Compute the number of static intervals
+
+    A static interval is a sequence of consecutive static bouts
+
+    :param histogram_time_moving: list of (n_steps, action_type)
+    :return: number of static intervals
+    """
+    stop = 0
+    for b in histogram_time_moving:
+        if b[1] == 0:
+            stop += 1
+    return stop
 
 
 @metric("absolute_orientations")
