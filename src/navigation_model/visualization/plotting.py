@@ -179,13 +179,18 @@ def plot_boxes(ax, data, labels=None, title=None, show_points=True, box_args=Non
     """
     if type(data) is dict:
         labels = data.keys()
-        data = np.array([d for d in data.values()]).transpose()
-    else:
-        data = np.array([d for d in data]).transpose()
-    data_length = data.shape[-1]
+        data = [d for d in data.values()]
+    try:
+        data = np.array(data).transpose()
+        data_length = data.shape[-1]
+        monodim = len(data.shape) == 1
+    except ValueError:
+        # data probably has different sizes, try to plot as-is
+        data_length = len(data)
+        monodim = False
 
     # we need to do a different thing when plotting single points
-    if len(data.shape) == 1:
+    if monodim:
         # and we plot just the means
         data = [np.array([d]) for d in data]
         sns.boxplot(data=data, ax=ax)
