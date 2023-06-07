@@ -122,7 +122,7 @@ class Mouse:
             self._history_ori.append(self._ori)
         return moving
 
-    def plot(self, ax, endpoints=False, c="y", size=0.1):
+    def plot(self, ax, endpoints=False, c="y", size=0.1, endpoint_size=None):
         """
         Plot the current position of the mouse and its endpoints
 
@@ -130,6 +130,7 @@ class Mouse:
         :param endpoints: if True plot the current endpoints
         :param c: color
         :param size: size of the mouse (same units as the maze tile size)
+        :param endpoint_size: size of the endpoints
         """
         mouse_points = np.array([[size * 2/3, 0.], [-size * 1/3, size/3], [-size * 1/3, -size/3]])
         rot = np.array([[np.cos(self._ori), -np.sin(self._ori)], [np.sin(self._ori), np.cos(self._ori)]])
@@ -141,7 +142,7 @@ class Mouse:
             ep = self.get_endpoints()
             ep_x = [p[0] for p in ep]
             ep_y = [p[1] for p in ep]
-            ax.scatter(ep_x, ep_y, marker='x', c=c, zorder=3)
+            ax.scatter(ep_x, ep_y, marker='x', c=c, zorder=3, s=endpoint_size)
 
     def plot_history(self, ax, c="y"):
         """
