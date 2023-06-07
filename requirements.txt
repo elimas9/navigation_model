@@ -2,4 +2,4 @@ numpy
 matplotlib
 scipy
 seaborn
-progressbar
+progressbar2
