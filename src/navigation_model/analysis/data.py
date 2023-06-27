@@ -9,7 +9,8 @@ class Session:
     An experimental session
     """
 
-    def __init__(self, timestamps, trajectory, new_sampling_time=None, reward=None):
+    def __init__(self, timestamps, trajectory, new_sampling_time=None, reward=None, first=None, end=None, maze=None,
+                 possible_actions=None):
         """
         Create the session and do an optional subsampling of the data
 
@@ -17,12 +18,17 @@ class Session:
         :param trajectory: list of coordinates
         :param new_sampling_time: sampling time for subsampling
         :param reward: list of rewards
+        :param first: integer indicating the first simulation steps to take into account in the creation of the
+        trajectory
+        :param end: integer indicating the final simulation steps to take into account in the creation of the trajectory
         """
         if len(trajectory) != len(timestamps):
             raise RuntimeError("Session: time and trajectory must have the same lenght")
         if reward is not None and len(reward) != len(timestamps):
             raise RuntimeError("Session: reward must have the same length as time and trajectory")
         self._trajectory = []
+        self._maze = maze
+        self._possible_actions = possible_actions
         self._reward = None if reward is None else []
         if new_sampling_time is None:
             self._trajectory = trajectory
@@ -64,6 +70,13 @@ class Session:
                     self._reward.append(r)
 
                 idx = next_idx
+
+        if first is not None:
+            self._trajectory = self._trajectory[:first]
+
+        if end is not None:
+            self._trajectory = self._trajectory[-end:]
+
         self._orientations = None
         self._compute_orientations()
 
@@ -173,7 +186,7 @@ class Session:
         plot_reward_sequence(ax, np.array(self._reward), np.array(self._trajectory), c=c_reward, marker=marker_reward)
 
     def _compute_orientations(self):
-        self._orientations = compute_orientations(self._trajectory)
+        self._orientations = compute_orientations(self._trajectory, self._maze, self._possible_actions)
 
     def __len__(self):
         return len(self._trajectory)

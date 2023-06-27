@@ -1,6 +1,8 @@
 import inspect
 
 import numpy as np
+import copy
+import math
 
 
 class Metric:
@@ -275,7 +277,8 @@ def _hist_orientation_commons(caller, n_bins=None, max_lim=None, possible_action
 
 
 @metric("orientations_histogram", "relative_orientations", "orientations_histogram_bins")
-def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, max_lim=None, possible_actions=None):
+def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, max_lim=None, possible_actions=None,
+                      distance=False):
     """
     Compute the histogram of orientations and the relative orientation (when there is motion)
 
@@ -295,6 +298,7 @@ def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, ma
     bins, min_lim, max_lim = _hist_orientation_commons("hist_orientations", n_bins, max_lim, possible_actions)
 
     relative_orientations = []
+    bin_2steps = 0
     for tim in range(0, len(absolute_orientations) - 1):
         rel_ori = absolute_orientations[tim + 1] - absolute_orientations[tim]
         if rel_ori > max_lim:
@@ -303,11 +307,30 @@ def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, ma
             rel_ori = rel_ori - (-np.pi * 2)
 
         if discrete_positions[tim + 1] != discrete_positions[tim]:
-            relative_orientations.append(rel_ori)
+            if distance:
+                # if (np.histogram(rel_ori, bins=bins, range=(min_lim, max_lim))[0] == [0, 0, 0, 1, 0, 0, 0, 0]).all():
+                if (np.histogram(rel_ori, bins=bins, range=(min_lim, max_lim))[0] == [0, 0, 1, 0, 0, 0]).all():
+                    dist = math.dist(discrete_positions[tim], discrete_positions[tim + 1])
+                    if dist > 1.5:
+                        bin_2steps += 1
+                    else:
+                        relative_orientations.append(rel_ori)
+                else:
+                    relative_orientations.append(rel_ori)
+            else:
+                relative_orientations.append(rel_ori)
 
     histogram_orientations = np.histogram(relative_orientations, bins=bins, range=(min_lim, max_lim))
 
-    return histogram_orientations[0], relative_orientations, histogram_orientations[1]
+    if distance:
+        # print(histogram_orientations[0])
+        # print(np.array([bin_2steps]))
+
+        return np.concatenate((histogram_orientations[0], np.array([bin_2steps])), axis=0), relative_orientations,\
+            histogram_orientations[1]
+    else:
+        return histogram_orientations[0], relative_orientations, histogram_orientations[1]
+
 
 
 @metric("orientations_histogram", "relative_orientations", "orientations_histogram_bins")
@@ -450,8 +473,23 @@ def compute_static_intervals(histogram_time_moving):
     return stop
 
 
+def get_endpoints_without_mouse(cont_pos, cont_ori, possible_actions, maze):
+    """
+    Compute a list of possible endpoints from a given position, with absolute coordinates
+
+    :return: list of np.array of discrete endpoints (2 coordinates)
+    """
+    # compute rotation matrix (rotation matrix for counterclockwise rotation)
+    rot = np.array([[np.cos(cont_ori), -np.sin(cont_ori)], [np.sin(cont_ori), np.cos(cont_ori)]])
+
+    ends = np.zeros((len(possible_actions), 2))
+    for idx, act in enumerate(possible_actions):
+        ends[idx] = cont_pos + np.matmul(rot, act)
+    return maze.cont2disc_list(ends)
+
+
 @metric("absolute_orientations")
-def compute_orientations(continuous_positions):
+def compute_orientations(continuous_positions, maze, possible_actions):
     """
     Compute the absolute orientations from a list of positions
 
@@ -459,12 +497,22 @@ def compute_orientations(continuous_positions):
     :return: list of absolute orientations
     """
     orientations = []
+    prev_ori = 0
+    theta = None
 
     for i in range(len(continuous_positions) - 1):
         p2 = continuous_positions[i + 1]
         p1 = continuous_positions[i]
 
-        if not np.allclose(p1, p2):
+        if maze is None and possible_actions is None:
+            condition = not np.allclose(p1, p2)
+        else:
+            condition = not np.allclose(p1, p2) and maze.cont2disc(p2) in get_endpoints_without_mouse(p1, prev_ori,
+                                                                                                      possible_actions,
+                                                                                                      maze)
+            # maze.is_movement_possible_cont(p1, p2)
+
+        if condition:
             # get angle in radians
             theta = np.arctan2(p2[1] - p1[1], p2[0] - p1[0])
             # correct angle
@@ -477,4 +525,84 @@ def compute_orientations(continuous_positions):
         else:
             if i > 0 and len(orientations) != 0:
                 orientations.append(orientations[-1])
+
+        if theta is not None:
+            prev_ori = theta
+
     return [orientations[0]] * (len(continuous_positions) - len(orientations)) + orientations
+
+
+@metric("it_2_visit_perc_maze")
+def it_perc_visited_maze(discrete_positions, maze, percentage=80):
+    """
+    Record the percentage of explored maze in time
+
+    :param discrete_positions: list of discrete positions
+    :param maze: maze
+    :param percentage: integer of the wanted percentage of visited maze for the analyses
+
+    :return: (list of the evolution of the percentage of visited maze)
+             integer of the number of iterations to cover the wanted percentage of the maze (if reached)
+    """
+    number_visitable_tiles = maze.get_number_visitable_tiles()
+    number_visited_tiles = 0
+    visited_tiles = []
+    # perc_visit_maze_all_sim = []
+    num_it_perc_visit = len(discrete_positions)
+
+    for idx, poss in enumerate(discrete_positions):
+        if poss not in visited_tiles:
+            number_visited_tiles += 1
+            perc_visit_maze = (number_visited_tiles * 100) / number_visitable_tiles
+            visited_tiles.append(copy.copy(poss))
+
+            # perc_visit_maze_all_sim.append(copy.copy(perc_visit_maze))
+
+            if perc_visit_maze >= percentage:
+                num_it_perc_visit = idx
+                break
+
+            if perc_visit_maze > 100:
+                raise RuntimeError(f"perc_visit_maze: {perc_visit_maze} > 100 !!!")
+
+    # return perc_visit_maze_all_sim, num_it_perc_visit
+    return num_it_perc_visit
+
+
+
+@metric("corridors_switches")
+def arms(discrete_positions, maze):
+    """
+    Count the number of switches between the 2 corridors
+
+    :param discrete_positions: list of discrete positions
+    :param maze: maze
+
+    :return: integer of the number of switch between the 2 corridors (subareas 1 and 7)
+    """
+    enter_idx = None
+    enter_side = None
+    time_diffs = []
+
+    for idx, tile in enumerate(discrete_positions):
+        sub_pos = maze.get_subarea(tile[0], tile[1])
+        if sub_pos == 1:
+            if enter_idx is None:
+                enter_idx = idx
+                enter_side = 1
+            elif enter_side == 7:
+                time_diffs.append(idx - enter_idx)
+                enter_idx = idx
+                enter_side = 1
+
+        elif sub_pos == 7:
+            if enter_idx is None:
+                enter_idx = idx
+                enter_side = 7
+            elif enter_side == 1:
+                time_diffs.append(idx - enter_idx)
+                enter_idx = idx
+                enter_side = 7
+
+    return len(time_diffs)
+
