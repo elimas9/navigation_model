@@ -6,7 +6,7 @@ A python library for analyzing, modelling, and simulating the spatial behavior a
 ## installation
 * in your directory of preference:
 ```commandline
-git clone git@github.com:elimas9/navigation_model.git
+git clone https://github.com/elimas9/navigation_model.git
 cd navigation_model
 pip install -e .
 ```
