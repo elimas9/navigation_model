@@ -11,3 +11,6 @@ cd navigation_model
 pip install -e .
 ```
 
+## optional requirements
+* FFmpeg (for generating videos of the behavior)
+
