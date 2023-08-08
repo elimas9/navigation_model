@@ -21,6 +21,8 @@ class Session:
         :param first: integer indicating the first simulation steps to take into account in the creation of the
         trajectory
         :param end: integer indicating the final simulation steps to take into account in the creation of the trajectory
+        :param interval: tuple or list indicating the starting and final simulation steps to take into account in the
+        creation of the trajectory
         :param maze: maze object
         :param possible_actions: list of tuples describing the next relative possible actions in the model
         """
@@ -220,7 +222,8 @@ class SessionList:
         for s in self._sessions:
             self._assert_session(s)
 
-    def create(self, timestamps, trajectory, new_sampling_time=None, reward=None):
+    def create(self, timestamps, trajectory, new_sampling_time=None, reward=None, first=None, end=None, interval=None,
+               maze=None, possible_actions=None):
         """
         Create a new session and append it to the list
 
@@ -228,8 +231,16 @@ class SessionList:
         :param trajectory: list of coordinates
         :param new_sampling_time: sampling time for subsampling
         :param reward: list of rewards
+        :param first: integer indicating the first simulation steps to take into account in the creation of the
+        trajectory
+        :param end: integer indicating the final simulation steps to take into account in the creation of the trajectory
+        :param interval: tuple or list indicating the starting and final simulation steps to take into account in the
+        creation of the trajectory
+        :param maze: maze object
+        :param possible_actions: list of tuples describing the next relative possible actions in the model
         """
-        self._sessions.append(Session(timestamps, trajectory, new_sampling_time, reward))
+        self._sessions.append(Session(timestamps, trajectory, new_sampling_time, reward, first, end, interval, maze,
+                                      possible_actions))
 
     def append(self, s):
         """

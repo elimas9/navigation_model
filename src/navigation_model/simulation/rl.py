@@ -327,7 +327,9 @@ class ShuffledReplays(ReplayStrategy):
             # make a list of all the s which have led to a stimulation at least once
             states_w_reward = []
             for update in self._buffer:
-                if update.transition.r:
+                if isinstance(alg, NegativeConditioning) and update.transition.r == -1.0:
+                    states_w_reward.append(update.transition.s1)
+                if isinstance(alg, PositiveConditioning) and update.transition.r == 1.0:
                     states_w_reward.append(update.transition.s1)
             states_w_reward = set(states_w_reward)
 
@@ -351,10 +353,13 @@ class ShuffledReplays(ReplayStrategy):
                     # based on the chosen, action compute ori1
                     trans_im.ori1 = np.arctan2(trans_im.cs1[1] - trans_im.s[1], trans_im.cs1[0] - trans_im.s[0])
 
-                    # if s1 has led to a stimulation at least once in the animal's experience, r=1, otw r=0
+                    # if s1 has led to a stimulation at least once in the animal's experience, r=1/-1, otw r=0
                     trans_im.r = 0
                     if trans_im.s1 in states_w_reward:
-                        trans_im.r = 1
+                        if isinstance(alg, NegativeConditioning):
+                            trans_im.r = -1
+                        else:
+                            trans_im.r = 1
 
                     alg.update(trans_im)
                 else:
@@ -373,7 +378,9 @@ class ShuffledReplays(ReplayStrategy):
             # make a list of all the s which have led to a stimulation at least once
             states_w_reward = []
             for update in self._buffer:
-                if update.transition.r:
+                if isinstance(alg, NegativeConditioning) and update.transition.r == -1.0:
+                    states_w_reward.append(update.transition.s1)
+                if isinstance(alg, PositiveConditioning) and update.transition.r == 1.0:
                     states_w_reward.append(update.transition.s1)
             states_w_reward = set(states_w_reward)
 
@@ -400,10 +407,13 @@ class ShuffledReplays(ReplayStrategy):
                     trans_im.cs1 = self._maze.disc2cont(trans_im.s1)
                     trans_im.ori1 = np.arctan2(trans_im.cs1[1] - trans_im.cs[1], trans_im.cs1[0] - trans_im.cs[0])
 
-                    # if s1 has led to a stimulation at least once in the animal's experience, r=1, otw r=0
+                    # if s1 has led to a stimulation at least once in the animal's experience, r=1/-1, otw r=0
                     trans_im.r = 0
                     if trans_im.s1 in states_w_reward:
-                        trans_im.r = 1
+                        if isinstance(alg, NegativeConditioning):
+                            trans_im.r = -1
+                        else:
+                            trans_im.r = 1
 
                     alg.update(trans_im)
             else:
@@ -412,4 +422,6 @@ class ShuffledReplays(ReplayStrategy):
                     trans = update.transition
 
                     alg.update(trans)
+
+
 
