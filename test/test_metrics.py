@@ -213,11 +213,11 @@ class TestMetricFunctions(unittest.TestCase):
         self.assertEqual(mov, 2)
         self.assertEqual(stop, 0)
 
-    # def test_compute_orientations(self):
-    #     pos_list = [(0, 0), (0, 0), (0, 1), (1, 1)]
-    #     ori = compute_orientations(pos_list)
-    #     self.assertEqual(len(pos_list), len(ori))
-    #     npt.assert_allclose(ori, [np.pi / 2] * 3 + [0.0])
+    def test_compute_orientations(self):
+        pos_list = [(0, 0), (0, 0), (0, 1), (1, 1)]
+        ori = compute_orientations(pos_list)
+        self.assertEqual(len(pos_list), len(ori))
+        npt.assert_allclose(ori, [np.pi / 2] * 3 + [0.0])
 
     def test_compute_static_intervals(self):
         hist_time_mov = [(10, 0), (3, 1), (1, 0), (3, 0)]

@@ -292,7 +292,7 @@ class ShuffledReplays(ReplayStrategy):
     """
     Shuffle the replay buffer
     """
-    def __init__(self, n_times, seed=None, imaginary=False, possible_actions=None, maze=None):
+    def __init__(self, n_times, seed=None, imaginary=False, maze=None, possible_actions=None):
         """
         Create a shuffled replay strategy
 
@@ -305,8 +305,8 @@ class ShuffledReplays(ReplayStrategy):
         self._buffer = []
         self._rng = np.random.default_rng(seed)
         self._imaginary = imaginary
-        self._possible_actions = possible_actions
         self._maze = maze
+        self._possible_actions = possible_actions
 
     def append(self, update):
         self._buffer.append(update)
@@ -314,7 +314,7 @@ class ShuffledReplays(ReplayStrategy):
     def clear_buffer(self):
         self._buffer = []
 
-    def offline_replays(self, alg):
+    def offline_replays_old(self, alg):
         """
         Performe offline experience replay
 
@@ -344,47 +344,72 @@ class ShuffledReplays(ReplayStrategy):
                     trans_im.s = trans.s
                     trans_im.extra['next_states'] = trans.extra['next_states']
 
-                    # compute the possible visitable next state for the current cs and ori
-                    # rot = np.array([[np.cos(trans_im.ori), -np.sin(trans_im.ori)], [np.sin(trans_im.ori), np.cos(trans_im.ori)]])
-                    # ends = np.zeros((len(self._possible_actions), 2))
-                    # for idx, act in enumerate(self._possible_actions):
-                    #     ends[idx] = trans_im.cs + np.matmul(rot, act)
-                    # next_states = self._maze.cont2disc_list(ends)
-                    # are_visitable = self._maze.are_visitable(next_states)
-
                     # randomly pick one of the possible visitable next states and identify cs1
-                    # trans_im.cs1 = random.choice(are_visitable)
-                    # trans_im.cs1 = random.choice(trans_im.extra['next_states'])
                     trans_im.s1 = random.choice(trans_im.extra['next_states'])
                     trans_im.cs1 = np.array(self._maze.disc2cont(trans_im.s1))
-                    # trans_im.ori1 = self._maze.disc2cont(trans_im.s1)
-
-                    # print(trans_im.cs1)
 
                     # based on the chosen, action compute ori1
                     trans_im.ori1 = np.arctan2(trans_im.cs1[1] - trans_im.s[1], trans_im.cs1[0] - trans_im.s[0])
-
-                    # identify s1
-                    # trans_im.s1 = self._maze.cont2disc(trans_im.cs1)
-                    # print(f'discr: {trans_im.cs1})
 
                     # if s1 has led to a stimulation at least once in the animal's experience, r=1, otw r=0
                     trans_im.r = 0
                     if trans_im.s1 in states_w_reward:
                         trans_im.r = 1
 
-                    # save the possible next states to make the replay update
-                    # trans_im.extra["next_states"] = [ns for i, ns in enumerate(next_states) if are_visitable[i]]
-
-                    # replay update
-                    # if not np.all(np.isclose(trans_im.s1, trans.s1)):
-                    #     print('imagin')
-                    #     print(trans)
-                    #     print(trans_im)
-
-                    # print(trans_im)
                     alg.update(trans_im)
-
                 else:
+                    alg.update(trans)
+
+    def offline_replays(self, alg):
+        """
+        Performe offline experience replay
+
+        :param alg: class representing the chosen replay strategy
+        :param imaginary: boolean to replay transitions the animal has never taken
+        :param possible_actions: list of relative possible next actions for the chosen maze
+        """
+
+        if self._imaginary:
+            # make a list of all the s which have led to a stimulation at least once
+            states_w_reward = []
+            for update in self._buffer:
+                if update.transition.r:
+                    states_w_reward.append(update.transition.s1)
+            states_w_reward = set(states_w_reward)
+
+        for _ in range(self._n_times):
+            if self._imaginary:
+                for rep in range(len(self._buffer)):
+                    # define a shuffled starting continuous state s (cs and ori)
+                    trans_im = Transition()
+                    trans_im.s = random.choice(self._maze.get_visitable_coordinates())
+                    trans_im.cs = self._maze.disc2cont(trans_im.s)
+                    trans_im.ori = random.uniform(-np.pi, np.pi)
+
+                    # compute the possible visitable next state for the current cs and ori
+                    rot = np.array([[np.cos(trans_im.ori), -np.sin(trans_im.ori)], [np.sin(trans_im.ori), np.cos(trans_im.ori)]])
+                    ends = np.zeros((len(self._possible_actions), 2))
+                    for idx, act in enumerate(self._possible_actions):
+                        ends[idx] = trans_im.cs + np.matmul(rot, act)
+                    is_visitable = self._maze.are_movements_possible_cont(trans_im.cs, ends)
+                    next_positions_cont = ends[is_visitable]
+                    next_visitable_tiles = self._maze.cont2disc_list(next_positions_cont)
+
+                    # randomly pick one of the possible visitable next states and identify cs1
+                    trans_im.s1 = random.choice(next_visitable_tiles)
+                    trans_im.cs1 = self._maze.disc2cont(trans_im.s1)
+                    trans_im.ori1 = np.arctan2(trans_im.cs1[1] - trans_im.cs[1], trans_im.cs1[0] - trans_im.cs[0])
+
+                    # if s1 has led to a stimulation at least once in the animal's experience, r=1, otw r=0
+                    trans_im.r = 0
+                    if trans_im.s1 in states_w_reward:
+                        trans_im.r = 1
+
+                    alg.update(trans_im)
+            else:
+                self._rng.shuffle(self._buffer)
+                for update in self._buffer:
+                    trans = update.transition
+
                     alg.update(trans)
 

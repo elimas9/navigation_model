@@ -55,11 +55,11 @@ class TestSession(unittest.TestCase):
         npt.assert_allclose(d["reward"], reward)
 
         # laod from dictionary
-        # s2 = Session.from_dict(d)
-        # npt.assert_allclose(s1.trajectory, s2.trajectory)
-        # npt.assert_allclose(s1.sampling_time, s2.sampling_time)
-        # npt.assert_allclose(s1.orientations, s2.orientations)
-        # npt.assert_allclose(s1.reward, s2.reward)
+        s2 = Session.from_dict(d)
+        npt.assert_allclose(s1.trajectory, s2.trajectory)
+        npt.assert_allclose(s1.sampling_time, s2.sampling_time)
+        npt.assert_allclose(s1.orientations, s2.orientations)
+        npt.assert_allclose(s1.reward, s2.reward)
 
     def test_nan(self):
         times = np.linspace(0., 1., 10)
@@ -101,12 +101,12 @@ class TestSessionList(unittest.TestCase):
         self.assertEqual(sl_list[0], sl1[0].to_dict())
         self.assertEqual(sl_list[1], sl1[1].to_dict())
 
-        # sl2 = SessionList.from_list(sl_list)
-        #
-        # npt.assert_allclose(sl2.all_trajectories, sl1.all_trajectories)
-        # npt.assert_allclose(sl2.all_trajectories, sl1.all_trajectories)
-        # npt.assert_allclose(sl2.all_orientations, sl1.all_orientations)
-        # npt.assert_allclose(sl2.all_rewards, sl1.all_rewards)
+        sl2 = SessionList.from_list(sl_list)
+
+        npt.assert_allclose(sl2.all_trajectories, sl1.all_trajectories)
+        npt.assert_allclose(sl2.all_trajectories, sl1.all_trajectories)
+        npt.assert_allclose(sl2.all_orientations, sl1.all_orientations)
+        npt.assert_allclose(sl2.all_rewards, sl1.all_rewards)
 
     def test_creation(self):
         s = Session(np.zeros(10), list(zip(np.arange(0, 10), np.arange(0, 10))))

@@ -9,8 +9,8 @@ class Session:
     An experimental session
     """
 
-    def __init__(self, timestamps, trajectory, new_sampling_time=None, reward=None, first=None, end=None, maze=None,
-                 possible_actions=None):
+    def __init__(self, timestamps, trajectory, new_sampling_time=None, reward=None, first=None, end=None, interval=None,
+                 maze=None, possible_actions=None):
         """
         Create the session and do an optional subsampling of the data
 
@@ -21,14 +21,14 @@ class Session:
         :param first: integer indicating the first simulation steps to take into account in the creation of the
         trajectory
         :param end: integer indicating the final simulation steps to take into account in the creation of the trajectory
+        :param maze: maze object
+        :param possible_actions: list of tuples describing the next relative possible actions in the model
         """
         if len(trajectory) != len(timestamps):
             raise RuntimeError("Session: time and trajectory must have the same lenght")
         if reward is not None and len(reward) != len(timestamps):
             raise RuntimeError("Session: reward must have the same length as time and trajectory")
         self._trajectory = []
-        self._maze = maze
-        self._possible_actions = possible_actions
         self._reward = None if reward is None else []
         if new_sampling_time is None:
             self._trajectory = trajectory
@@ -77,8 +77,11 @@ class Session:
         if end is not None:
             self._trajectory = self._trajectory[-end:]
 
+        if interval is not None:
+            self._trajectory = self._trajectory[interval[0]:interval[1]]
+
         self._orientations = None
-        self._compute_orientations()
+        self._compute_orientations(maze=maze, possible_actions=possible_actions)
 
     @property
     def trajectory(self):
@@ -185,8 +188,14 @@ class Session:
         plot_trajectory(ax, self._trajectory, c=c_trajectory)
         plot_reward_sequence(ax, np.array(self._reward), np.array(self._trajectory), c=c_reward, marker=marker_reward)
 
-    def _compute_orientations(self):
-        self._orientations = compute_orientations(self._trajectory, self._maze, self._possible_actions)
+    def _compute_orientations(self, maze=None, possible_actions=None):
+        """
+        Compute the orientations
+
+        :param maze: maze object
+        :param possible_actions: list of tuples describing the next relative possible actions in the model
+        """
+        self._orientations = compute_orientations(self._trajectory, maze=maze, possible_actions=possible_actions)
 
     def __len__(self):
         return len(self._trajectory)

@@ -68,7 +68,6 @@ def create_video(trajectory, maze, delta_t, filepath,
     # ax.add_artist(pnt_end)
     ln_pnt_end = ax.plot([], [], c="red", marker='D', markersize=5)[0]
 
-
     # create circle to show reward
     if reward is not None:
         circle = plt.Circle(reward_position, reward_size, color=reward_color, alpha=0)

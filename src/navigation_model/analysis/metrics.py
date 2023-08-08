@@ -489,11 +489,13 @@ def get_endpoints_without_mouse(cont_pos, cont_ori, possible_actions, maze):
 
 
 @metric("absolute_orientations")
-def compute_orientations(continuous_positions, maze, possible_actions):
+def compute_orientations(continuous_positions, maze=None, possible_actions=None):
     """
     Compute the absolute orientations from a list of positions
 
     :param continuous_positions: list of continuous positions
+    :param maze: maze object
+    :param possible_actions: list of tuples describing the next relative possible actions in the model
     :return: list of absolute orientations
     """
     orientations = []
@@ -510,8 +512,6 @@ def compute_orientations(continuous_positions, maze, possible_actions):
             condition = not np.allclose(p1, p2) and maze.cont2disc(p2) in get_endpoints_without_mouse(p1, prev_ori,
                                                                                                       possible_actions,
                                                                                                       maze)
-            # maze.is_movement_possible_cont(p1, p2)
-
         if condition:
             # get angle in radians
             theta = np.arctan2(p2[1] - p1[1], p2[0] - p1[0])
