@@ -4,7 +4,8 @@ import numpy.testing as npt
 
 from navigation_model.analysis.metrics import Metric, Analyzer, metric, \
     discretize_positions, occupancy_map, tile_analysis, hist_orientations, hist_orientations_filtered,\
-    motion_analysis, hist_time_moving, subareas, mov_bouts, compute_orientations, compute_static_intervals
+    motion_analysis, hist_time_moving, subareas, mov_bouts, compute_orientations, compute_static_intervals,\
+    shock_zone_entries
 
 from navigation_model.simulation.maze import Maze
 
@@ -209,9 +210,12 @@ class TestMetricFunctions(unittest.TestCase):
 
     def test_mov_bouts(self):
         hist = [(1, 0), (2, 1), (1, 0)]
-        mov, stop = mov_bouts(hist)
+        mov, stop, hist_ = mov_bouts(hist)
+        # self.assertEqual(mov, 2)
+        # self.assertEqual(stop, 0)
         self.assertEqual(mov, 2)
-        self.assertEqual(stop, 0)
+        self.assertEqual(stop, 2)
+        npt.assert_allclose(hist_, np.array([2, 2]))
 
     def test_compute_orientations(self):
         pos_list = [(0, 0), (0, 0), (0, 1), (1, 1)]
@@ -223,3 +227,15 @@ class TestMetricFunctions(unittest.TestCase):
         hist_time_mov = [(10, 0), (3, 1), (1, 0), (3, 0)]
         static_intervals = compute_static_intervals(hist_time_mov)
         self.assertEqual(3, static_intervals)
+
+    def test_shock_zone_entries(self):
+        discrete_positions = [(1, 8), (6, 8), (7, 8), (1, 8), (0, 8)]
+        subareas_shock_zone = 3
+        ssz = shock_zone_entries(discrete_positions, self.maze, subareas_shock_zone)
+        self.assertEqual(2, ssz)
+
+        discrete_positions = [(7, 0), (7, 7), (1, 3), (1, 1), (1, 8), (0, 2), (0, 8), (2, 2)]
+        subareas_shock_zone = (1, 2)
+        ssz = shock_zone_entries(discrete_positions, self.maze, subareas_shock_zone)
+        self.assertEqual(3, ssz)
+

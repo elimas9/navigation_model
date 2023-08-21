@@ -732,3 +732,6 @@ class Maze:
         ax.set_xlim(-self.size_tile * 0.1, self.size_tile * (self.size_x + 0.1))
         ax.set_ylim(-self.size_tile * 0.1, self.size_tile * (self.size_y + 0.1))
         ax.set_aspect('equal')
+        ax.set_xticks([])
+        ax.set_yticks([])
+

@@ -1,8 +1,69 @@
-import numpy as np
+import math
 
+import numpy as np
+from scipy.special import rel_entr
+from scipy.spatial.distance import jensenshannon
 
 ###################
 # distances
+
+def js_distance(h1, h2, base=None, *, axis=0, keepdims=False):
+    """
+    Python Jensen-Shannon distance implementation (not symmetric)
+
+    :param h1: first histogram
+    :param h2: second histogram
+    :return: distance
+    """
+    p = np.asarray(h1[0])
+    q = np.asarray(h2[0])
+    if np.sum(p, axis=axis, keepdims=True) == 0:
+        # print('sum is 0 at den')
+        # print(h1[0])
+        # print(h2[0])
+        p = 0  # 1
+    else:
+        p = p / np.sum(p, axis=axis, keepdims=True)
+
+    if np.sum(q, axis=axis, keepdims=True) == 0:
+        # print('sum is 0 at den')
+        # print(h1[0])
+        # print(h2[0])
+        q = 0  # 1
+    else:
+        q = q / np.sum(q, axis=axis, keepdims=True)
+
+    m = (p + q) / 2.0
+    left = rel_entr(p, m)
+    right = rel_entr(q, m)
+    left_sum = np.sum(left, axis=axis, keepdims=keepdims)
+    right_sum = np.sum(right, axis=axis, keepdims=keepdims)
+    js = left_sum + right_sum
+    if base is not None:
+        js /= np.log(base)
+
+    distance = np.sqrt(js / 2.0)
+
+    if math.isinf(distance):
+        distance = 1
+
+    if np.isnan(distance):
+        print(h1[0])
+        print(h2[0])
+
+    return distance
+
+def kl_divergence(h1, h2):
+    """
+    Python Kullback-Leibler divergence implementation (not symmetric)
+
+    :param h1: first histogram - it must always be the data
+    :param h2: second histogram - it must always be the model's results
+    :return: distance
+    """
+    return sum(rel_entr(h1, h2))
+
+
 def normalized_distance(h1, h2):
     """
     Normalized distance between two histograms

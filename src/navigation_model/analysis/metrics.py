@@ -248,6 +248,33 @@ def tile_analysis(discrete_positions, maze, tiles=None):
     return perc, ratio, count
 
 
+@metric("tiles_histogram")
+def histogram_tiles(discrete_positions, maze, tiles=None):
+    """
+    Compute histogram of ratio of tile types occupancy
+
+    :param discrete_positions: list of discrete positions
+    :param maze: maze
+    :param tiles: list of tile types to analyze
+    :return: histogram of tile ratio occupancy
+    """
+    # get default tiles
+    if tiles is None:
+        tiles = list(maze.MazeTile)
+
+    # count
+    count = {t: 0 for t in tiles}
+    for tile in discrete_positions:
+        type_tile = maze.get_tile(tile)
+        count[type_tile] += 1
+
+    # ratio
+    totals = maze.description()
+    ratio = {t: count[t] / totals[t] if totals[t] > 0 else 0 for t in tiles}
+
+    return np.array([ratio[maze.MazeTile.CORNER], ratio[maze.MazeTile.WALL], ratio[maze.MazeTile.CENTRE]])
+
+
 def _hist_orientation_commons(caller, n_bins=None, max_lim=None, possible_actions=None):
     if n_bins is not None and possible_actions is not None:
         raise RuntimeError(f"Cannot use both n_bins and possible_actions in {caller}")
@@ -332,6 +359,25 @@ def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, ma
         return histogram_orientations[0], relative_orientations, histogram_orientations[1]
 
 
+@metric("rel_ori_signature", "rel_ori_signature_histogram")
+def relative_orientation_signatures(orientations_histogram):
+    """
+    Compute the signatures of the histograms of the relative orientations and their histogram
+
+    :param orientations_histogram: histogram of relative orientations
+    :return: tuple of 3 int, that are the 3 signatures of the relative orientations histogram and their histogram
+    """
+
+    lateral_ori = np.median([orientations_histogram[0], orientations_histogram[1], orientations_histogram[3],
+                             orientations_histogram[4]])
+
+    return (orientations_histogram[2] - lateral_ori,
+            orientations_histogram[2] - orientations_histogram[5],
+            orientations_histogram[6] - orientations_histogram[5]),\
+        np.array([orientations_histogram[2] - lateral_ori,
+                  orientations_histogram[2] - orientations_histogram[5],
+                  orientations_histogram[6] - orientations_histogram[5]])
+
 
 @metric("orientations_histogram", "relative_orientations", "orientations_histogram_bins")
 def hist_orientations_filtered(absolute_orientations, discrete_positions,
@@ -391,6 +437,7 @@ def motion_analysis(discrete_positions):
         if discrete_positions[i] != discrete_positions[i-1]:
             count_moving += 1
             moving_bool_list[i] = True
+
     return count_moving, moving_bool_list
 
 
@@ -437,7 +484,42 @@ def subareas(discrete_positions, maze):
     return hist_subareas[0]
 
 
-@metric("bouts_mov", "bouts_stop")
+@metric("shock_zone_entries")
+def shock_zone_entries(discrete_positions, maze, subareas_shock_zone):
+    """
+    Compute the histogram of subareas
+
+    :param discrete_positions: list of discrete positions
+    :param maze: maze
+    :param subareas_shock_zone: int or list of int indicating the subareas which constitutes the shock zone (from bottom
+    left to bottomo right, from 1 to 7)
+    :return: int of shock zone entries
+    """
+    if type(subareas_shock_zone) == int:
+        shock_zones = [subareas_shock_zone]
+    else:
+        shock_zones = subareas_shock_zone
+
+    pos_subareas = maze.get_subareas(discrete_positions)
+
+    if pos_subareas[0] in shock_zones:
+        c = 1
+        inside = True
+    else:
+        c = 0
+        inside = False
+
+    for ps in pos_subareas[1:]:
+        if ps in shock_zones and not inside:
+            c += 1
+            inside = True
+        elif ps not in shock_zones and inside:
+            inside = False
+
+    return c
+
+
+@metric("bouts_mov", "bouts_stop", "moving_dynamics_histogram")
 def mov_bouts(histogram_time_moving):
     """
     Compute the moving/not-moving over median bouts
@@ -445,15 +527,28 @@ def mov_bouts(histogram_time_moving):
     :param histogram_time_moving: list of (n_steps, action_type)
     :return: bouts moving, bouts not moving
     """
-    median_period = np.median([b[0] for b in histogram_time_moving])
+    # print(f'hist mov: {histogram_time_moving}')
+    # median_period = np.median([b[0] for b in histogram_time_moving])
+    # mov = 0
+    # stop = 0
+    # for b in histogram_time_moving:
+    #     if b[0] > median_period and b[1] == 1:
+    #         mov += b[0]
+    #     elif b[0] > median_period and b[1] == 0:
+    #         stop += b[0]
+    # print(f'hist mov: {histogram_time_moving}')
+    # median_period = np.median([b[0] for b in histogram_time_moving])
     mov = 0
     stop = 0
     for b in histogram_time_moving:
-        if b[0] > median_period and b[1] == 1:
+        if b[1] == 1:
             mov += b[0]
-        elif b[0] > median_period and b[1] == 0:
+        else:
             stop += b[0]
-    return mov, stop
+
+    return mov, stop, np.array([mov, stop])
+
+
 
 
 @metric("static_intervals")
