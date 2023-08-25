@@ -366,6 +366,7 @@ def relative_orientation_signatures(orientations_histogram):
 
     :param orientations_histogram: histogram of relative orientations
     :return: tuple of 3 int, that are the 3 signatures of the relative orientations histogram and their histogram
+    (forw-lat, forw-back, back-2forw)
     """
 
     lateral_ori = np.median([orientations_histogram[0], orientations_histogram[1], orientations_histogram[3],
