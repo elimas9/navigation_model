@@ -1,11 +1,21 @@
 import setuptools
 import site
 import sys
+from glob import glob
+from pybind11.setup_helpers import Pybind11Extension
 
 site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
+
+ext_modules = [
+    Pybind11Extension(
+        "_navigation_model",
+        sorted(glob("src/_navigation_model/*.cpp")),  # Sort source files for reproducibility,
+        include_dirs=["/usr/include/eigen3"]
+    ),
+]
 
 setuptools.setup(
     name="navigation-model",
@@ -32,5 +42,6 @@ setuptools.setup(
         'numpy',
         'scipy',
         'matplotlib'
-    ]
+    ],
+    ext_modules=ext_modules
 )

@@ -1,5 +1,6 @@
 import numpy as np
 import unittest
+import numpy.testing as npt
 
 from navigation_model.simulation.mouse import Mouse
 
@@ -14,7 +15,7 @@ class TestMouse(unittest.TestCase):
         self.m = Mouse(self.init_pos, self.init_ori, possible_actions)
 
     def test_description(self):
-        self.assertEqual(self.m.position, self.init_pos)
+        npt.assert_allclose(self.m.position, self.init_pos)
         self.assertEqual(self.m.orientation, self.init_ori)
 
     def test_endpoints(self):
@@ -27,28 +28,30 @@ class TestMouse(unittest.TestCase):
         new_pos = (2, 2)
         moved = self.m.move_to(new_pos)
         self.assertTrue(moved)
-        self.assertEqual(self.m.position, new_pos)
+        npt.assert_allclose(self.m.position, new_pos)
         self.assertEqual(self.m.orientation, 0)
 
         new_pos = (0, 2)
         moved = self.m.move_to(*new_pos)
         self.assertTrue(moved)
-        self.assertEqual(self.m.position, new_pos)
+        npt.assert_allclose(self.m.position, new_pos)
         self.assertAlmostEqual(self.m.orientation, np.pi)
 
     def test_reset(self):
         self.m.move_to(1, 1)
-        self.assertNotEqual(self.m.position, self.init_pos)
+        self.assertFalse(np.allclose(self.m.position, self.init_pos))
         self.assertNotEqual(self.m.orientation, self.init_ori)
         self.m.reset()
-        self.assertEqual(self.m.position, self.init_pos)
+        npt.assert_allclose(self.m.position, self.init_pos)
         self.assertEqual(self.m.orientation, self.init_ori)
 
     def test_history(self):
         self.m.move_to(1, 1)
-        self.assertEqual(self.m.history_position, [(1, 2), (1, 1)])
+        npt.assert_allclose(self.m.history_position, [(1, 2), (1, 1)])
+        self.m.move_to(2, 2)
+        npt.assert_allclose(self.m.history_position, [(1, 2), (1, 1), (2, 2)])
         self.m.reset_history()
-        self.assertEqual(self.m.history_position, [(1, 2)])
+        npt.assert_allclose(self.m.history_position, [(1, 2)])
 
         self.m.enable_history(False)
         self.m.move_to(2, 2)
