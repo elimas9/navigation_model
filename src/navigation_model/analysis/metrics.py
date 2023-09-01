@@ -317,7 +317,7 @@ def hist_orientations(absolute_orientations, discrete_positions, n_bins=None, ma
     :param n_bins: number of bins for the histogram
     :param max_lim: orientation corresponding to the last bin
     :param possible_actions: list of possible actions to create the bins
-    :return: histogram of orientations, relative orientations, bins for the histogram
+    :return: histogram of orientations, relative orientations, bins for the histogram (90, 45, 0, 45, 90, 180, 0x2)
     """
     if len(absolute_orientations) != len(discrete_positions):
         raise RuntimeError(f"Wrong input sizes for hist_orientations {len(absolute_orientations)} != {len(discrete_positions)}")
