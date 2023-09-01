@@ -1,5 +1,5 @@
 # navigation_model
- 
+
 A python library for analyzing, modelling, and simulating the spatial behavior and learning of rodents.
 >This code has been mostly developped for my PhD thesis: [MassiE_PhDManuscript(2023)](https://theses.hal.science/tel-04151811)
 
@@ -11,6 +11,7 @@ cd navigation_model
 pip install -e .
 ```
 
-## optional requirements
-* FFmpeg (for generating videos of the behavior)
+## requirements
+* Eigen3
+* FFmpeg (optional, for generating videos of the behavior)
 
