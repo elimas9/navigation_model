@@ -66,7 +66,7 @@ PosList Mouse::get_endpoints() const {
     rot << std::cos(ori), -std::sin(ori), std::sin(ori), std::cos(ori);
 
     PosList ends = PosList::Zero(possible_actions.rows(), 2);
-    for (size_t i = 0; i < possible_actions.rows(); i++) {
+    for (Eigen::Index i = 0; i < possible_actions.rows(); i++) {
         ends.block<1, 2>(i, 0) = rot * possible_actions.block<1, 2>(i, 0).transpose() + pos;
     }
     return ends;

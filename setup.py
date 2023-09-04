@@ -2,7 +2,7 @@ import setuptools
 import site
 import sys
 from glob import glob
-from pybind11.setup_helpers import Pybind11Extension
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
 
@@ -43,5 +43,6 @@ setuptools.setup(
         'scipy',
         'matplotlib'
     ],
+    cmdclass={"build_ext": build_ext},
     ext_modules=ext_modules
 )
