@@ -485,8 +485,39 @@ def subareas(discrete_positions, maze):
     return hist_subareas[0]
 
 
-@metric("shock_zone_entries")
-def shock_zone_entries(discrete_positions, maze, subareas_shock_zone):
+@metric("latency_enter_shock_zone")
+def latency_enter_shock_zone(discrete_positions, maze, subareas_shock_zone=None, tile_lines=None):
+    """
+     Compute the latency time to enter the shock zone
+
+     :param discrete_positions: list of discrete positions
+     :param maze: maze
+     :param subareas_shock_zone: int or list of int indicating the subareas which constitutes the shock zone (from bottom
+     left to bottomo right, from 1 to 7)
+     :return: int of iterations that passed before the agent enter the shock zone for the first time
+     """
+    if subareas_shock_zone is not None and tile_lines is None:
+        if type(subareas_shock_zone) == int:
+            shock_zones = [subareas_shock_zone]
+        else:
+            shock_zones = subareas_shock_zone
+
+        pos_subareas = maze.get_subareas(discrete_positions)
+
+        for id_dp, dp in enumerate(pos_subareas):
+            if dp in shock_zones:
+                return id_dp
+
+    elif subareas_shock_zone is None and tile_lines is not None:
+        for id_dp, dp in enumerate(discrete_positions):
+            if dp[1] <= tile_lines - 1 and dp[0] <= 2:
+                return id_dp
+
+    return len(discrete_positions) - 1
+
+
+@metric("occupancy_shock_zone")
+def occupancy_shock_zone(discrete_positions, tile_lines=5):
     """
     Compute the histogram of subareas
 
@@ -496,26 +527,61 @@ def shock_zone_entries(discrete_positions, maze, subareas_shock_zone):
     left to bottomo right, from 1 to 7)
     :return: int of shock zone entries
     """
-    if type(subareas_shock_zone) == int:
-        shock_zones = [subareas_shock_zone]
-    else:
-        shock_zones = subareas_shock_zone
-
-    pos_subareas = maze.get_subareas(discrete_positions)
-
-    if pos_subareas[0] in shock_zones:
-        c = 1
-        inside = True
-    else:
-        c = 0
-        inside = False
-
-    for ps in pos_subareas[1:]:
-        if ps in shock_zones and not inside:
+    c = 0
+    for dp in discrete_positions:
+        if dp[1] <= tile_lines - 1 and dp[0] <= 2:
             c += 1
+    return c
+
+
+@metric("shock_zone_entries")
+def shock_zone_entries(discrete_positions, maze, subareas_shock_zone=None, tile_lines=None):
+    """
+    Compute the histogram of subareas
+
+    :param discrete_positions: list of discrete positions
+    :param maze: maze
+    :param subareas_shock_zone: int or list of int indicating the subareas which constitutes the shock zone (from bottom
+    left to bottomo right, from 1 to 7)
+    :return: int of shock zone entries
+    """
+    if subareas_shock_zone is not None and tile_lines is None:
+        if type(subareas_shock_zone) == int:
+            shock_zones = [subareas_shock_zone]
+        else:
+            shock_zones = subareas_shock_zone
+
+        pos_subareas = maze.get_subareas(discrete_positions)
+
+        if pos_subareas[0] in shock_zones:
+            c = 1
             inside = True
-        elif ps not in shock_zones and inside:
+        else:
+            c = 0
             inside = False
+
+        for ps in pos_subareas[1:]:
+            if ps in shock_zones and not inside:
+                c += 1
+                inside = True
+            elif ps not in shock_zones and inside:
+                inside = False
+
+    elif subareas_shock_zone is None and tile_lines is not None:
+
+        if discrete_positions[0][1] <= tile_lines - 1 and discrete_positions[0][0] <= 2:
+            c = 1
+            inside = True
+        else:
+            c = 0
+            inside = False
+
+        for dp in discrete_positions:
+            if dp[1] <= tile_lines - 1 and dp[0] <= 2 and not inside:
+                c += 1
+                inside = True
+            elif (dp[1] > tile_lines - 1 and inside) or (dp[1] <= tile_lines - 1 and dp[0] >= 6 and inside):
+                inside = False
 
     return c
 

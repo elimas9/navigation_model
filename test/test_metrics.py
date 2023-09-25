@@ -5,7 +5,7 @@ import numpy.testing as npt
 from navigation_model.analysis.metrics import Metric, Analyzer, metric, \
     discretize_positions, occupancy_map, tile_analysis, hist_orientations, hist_orientations_filtered,\
     motion_analysis, hist_time_moving, subareas, mov_bouts, compute_orientations, compute_static_intervals,\
-    shock_zone_entries
+    shock_zone_entries, latency_enter_shock_zone, occupancy_shock_zone
 
 from navigation_model.simulation.maze import Maze
 
@@ -231,11 +231,104 @@ class TestMetricFunctions(unittest.TestCase):
     def test_shock_zone_entries(self):
         discrete_positions = [(1, 8), (6, 8), (7, 8), (1, 8), (0, 8)]
         subareas_shock_zone = 3
-        ssz = shock_zone_entries(discrete_positions, self.maze, subareas_shock_zone)
+        tile_lines = None
+        ssz = shock_zone_entries(discrete_positions, self.maze, subareas_shock_zone=subareas_shock_zone,
+                                 tile_lines=tile_lines)
         self.assertEqual(2, ssz)
 
         discrete_positions = [(7, 0), (7, 7), (1, 3), (1, 1), (1, 8), (0, 2), (0, 8), (2, 2)]
         subareas_shock_zone = (1, 2)
-        ssz = shock_zone_entries(discrete_positions, self.maze, subareas_shock_zone)
+        tile_lines = None
+        ssz = shock_zone_entries(discrete_positions, self.maze, subareas_shock_zone=subareas_shock_zone,
+                                 tile_lines=tile_lines)
+        self.assertEqual(3, ssz)
+
+        discrete_positions = [(7, 0), (7, 7), (1, 3), (1, 1), (1, 8), (0, 2), (0, 8), (2, 2)]
+        tile_lines = 5
+        ssz = shock_zone_entries(discrete_positions, self.maze, subareas_shock_zone=None, tile_lines=tile_lines)
+        self.assertEqual(3, ssz)
+
+        discrete_positions = [(2, 4), (2, 5), (1, 2), (1, 1), (7, 0)]
+        tile_lines = 5
+        ssz = shock_zone_entries(discrete_positions, self.maze, subareas_shock_zone=None, tile_lines=tile_lines)
+        self.assertEqual(2, ssz)
+
+        discrete_positions = [(2, 4), (2, 5), (1, 2), (1, 1), (7, 0)]
+        tile_lines = 2
+        ssz = shock_zone_entries(discrete_positions, self.maze, subareas_shock_zone=None, tile_lines=tile_lines)
+        self.assertEqual(1, ssz)
+
+        discrete_positions = [(7, 0), (2, 5), (2, 4), (2, 5), (1, 2), (1, 1), (7, 0)]
+        tile_lines = 5
+        ssz = shock_zone_entries(discrete_positions, self.maze, subareas_shock_zone=None, tile_lines=tile_lines)
+        self.assertEqual(2, ssz)
+
+
+    def test_latency_enter_shock_zone(self):
+        discrete_positions = [(1, 8), (6, 8), (7, 8), (1, 8), (0, 8)]
+        subareas_shock_zone = 3
+        tile_lines = None
+        ssz = latency_enter_shock_zone(discrete_positions, self.maze, subareas_shock_zone=subareas_shock_zone,
+                                 tile_lines=tile_lines)
+        self.assertEqual(0, ssz)
+
+        discrete_positions = [(7, 0), (7, 7), (1, 3), (1, 1), (1, 8), (0, 2), (0, 8), (2, 2)]
+        subareas_shock_zone = (1, 2)
+        tile_lines = None
+        ssz = latency_enter_shock_zone(discrete_positions, self.maze, subareas_shock_zone=subareas_shock_zone,
+                                 tile_lines=tile_lines)
+        self.assertEqual(2, ssz)
+
+        discrete_positions = [(7, 0), (7, 7), (1, 3), (1, 1), (1, 8), (0, 2), (0, 8), (2, 2)]
+        tile_lines = 5
+        ssz = latency_enter_shock_zone(discrete_positions, self.maze, subareas_shock_zone=None, tile_lines=tile_lines)
+        self.assertEqual(2, ssz)
+
+        discrete_positions = [(2, 4), (2, 5), (1, 2), (1, 1), (7, 0)]
+        tile_lines = 5
+        ssz = latency_enter_shock_zone(discrete_positions, self.maze, subareas_shock_zone=None, tile_lines=tile_lines)
+        self.assertEqual(0, ssz)
+
+        discrete_positions = [(2, 4), (2, 5), (1, 2), (1, 1), (7, 0)]
+        tile_lines = 2
+        ssz = latency_enter_shock_zone(discrete_positions, self.maze, subareas_shock_zone=None, tile_lines=tile_lines)
+        self.assertEqual(3, ssz)
+
+        discrete_positions = [(7, 0), (2, 5), (2, 4), (2, 5), (1, 2), (1, 1), (7, 0)]
+        tile_lines = 5
+        ssz = latency_enter_shock_zone(discrete_positions, self.maze, subareas_shock_zone=None, tile_lines=tile_lines)
+        self.assertEqual(2, ssz)
+
+        discrete_positions = [(7, 0), (2, 5), (2, 5), (7, 0)]
+        tile_lines = 5
+        ssz = latency_enter_shock_zone(discrete_positions, self.maze, subareas_shock_zone=None, tile_lines=tile_lines)
+        self.assertEqual(3, ssz)
+
+
+    def test_occupancy_shock_zone(self):
+        discrete_positions = [(1, 8), (6, 8), (7, 8), (1, 8), (0, 8)]
+        ssz = occupancy_shock_zone(discrete_positions)
+        self.assertEqual(0, ssz)
+
+        discrete_positions = [(7, 0), (7, 7), (1, 3), (1, 1), (1, 8), (0, 2), (0, 8), (2, 2)]
+        ssz = occupancy_shock_zone(discrete_positions)
+        self.assertEqual(4, ssz)
+
+        discrete_positions = [(7, 0), (7, 7), (1, 3), (1, 1), (1, 8), (0, 2), (0, 8), (2, 2)]
+        tile_lines = 5
+        ssz = occupancy_shock_zone(discrete_positions, tile_lines=tile_lines)
+        self.assertEqual(4, ssz)
+
+        discrete_positions = [(2, 4), (2, 5), (1, 2), (1, 1), (7, 0)]
+        ssz = occupancy_shock_zone(discrete_positions)
+        self.assertEqual(3, ssz)
+
+        discrete_positions = [(2, 4), (2, 5), (1, 2), (1, 1), (7, 0)]
+        tile_lines = 2
+        ssz = occupancy_shock_zone(discrete_positions, tile_lines=tile_lines)
+        self.assertEqual(1, ssz)
+
+        discrete_positions = [(7, 0), (2, 5), (2, 4), (2, 5), (1, 2), (1, 1), (7, 0)]
+        ssz = occupancy_shock_zone(discrete_positions)
         self.assertEqual(3, ssz)
 
