@@ -1,7 +1,31 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel",
-    "pybind11>=2.10.1"
-]
+requires = ["setuptools>=42", "pybind11>=2.10.1"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "navigation_model"
+version = "0.2.0"
+authors = [{name = "Elisa Massi", email = "elisa.massi9@gmail.com"}]
+description = "A python library for analyzing, modelling, and simulating the spatial behavior and learning of rodents."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers= [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "seaborn",
+    "progressbar2"
+]
+license = {file = "LICENSE"}
+
+[project.urls]
+Homepage = "https://github.com/elimas9/mavigation_model"
+"Bug Tracker" = "https://github.com/elimas9/navigation_model/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]

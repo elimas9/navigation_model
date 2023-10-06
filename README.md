@@ -8,10 +8,9 @@ A python library for analyzing, modelling, and simulating the spatial behavior a
 ```commandline
 git clone https://github.com/elimas9/navigation_model.git
 cd navigation_model
-pip install -e .
+pip install .
 ```
 
 ## requirements
-* Eigen3
 * FFmpeg (optional, for generating videos of the behavior)
 

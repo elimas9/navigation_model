@@ -3,46 +3,35 @@ import site
 import sys
 from glob import glob
 from pybind11.setup_helpers import Pybind11Extension, build_ext
+from urllib.request import urlretrieve
+import shutil
+import os
+import tarfile
 
 site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+class build_ext_with_eigen(build_ext):
+
+    def run(self):
+        urlretrieve("https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz", "eigen.tar.gz")
+        with tarfile.open("eigen.tar.gz") as eigen_sources:
+            eigen_sources.extractall()
+        self.extensions[0].include_dirs.append("eigen-3.4.0")
+        build_ext.run(self)
+        # remove eigen folder and sources
+        shutil.rmtree("eigen-3.4.0")
+        os.remove("eigen.tar.gz")
+
 
 ext_modules = [
     Pybind11Extension(
         "_navigation_model",
         sorted(glob("src/_navigation_model/*.cpp")),  # Sort source files for reproducibility,
-        include_dirs=["/usr/include/eigen3"]
+        include_dirs=["eigen-3.4.0"]
     ),
 ]
 
 setuptools.setup(
-    name="navigation-model",
-    version="0.2.0",
-    author="Elisa Massi",
-    author_email="elymas93@gmail.com",
-    description="A python library for analyzing, modelling, and simulating the spatial behavior and learning of rodents. ",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://github.com/elimas9/mavigation_model",
-    project_urls={
-        "Bug Tracker": "https://github.com/elimas9/navigation_model/issues",
-    },
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: BSD License",
-        "Operating System :: OS Independent",
-    ],
-    package_dir={"": "src"},
-    license_files=("LICENSE",),
-    packages=setuptools.find_packages(where="src"),
-    python_requires=">=3.7",
-    install_requires=[
-        'numpy',
-        'scipy',
-        'matplotlib'
-    ],
-    cmdclass={"build_ext": build_ext},
+    cmdclass={"build_ext": build_ext_with_eigen},
     ext_modules=ext_modules
 )
